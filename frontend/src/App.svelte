@@ -43,6 +43,8 @@
       return acc;
   }, {});
 
+  $: allAccountNames = Object.keys(accountBalances).sort();
+
   $: liquidCash = Object.entries(accountBalances)
       .filter(([name]) => name.startsWith("Assets:Liquid"))
       .reduce((sum, [_, bal]) => sum + bal, 0);
@@ -192,14 +194,14 @@
         <input id="tx-date" type="date" bind:value={newTx.date} />
       </div>
 
-      <div class="form-group row">
+    <div class="form-group row">
         <div class="half">
           <label for="tx-source">Source Account</label>
-          <input id="tx-source" type="text" bind:value={newTx.source} placeholder="e.g. Assets:Liquid:PagBank" />
+          <input id="tx-source" type="text" list="account-options" bind:value={newTx.source} placeholder="Search or type new..." autocomplete="off" />
         </div>
         <div class="half">
           <label for="tx-dest">Destination Account</label>
-          <input id="tx-dest" type="text" bind:value={newTx.destination} placeholder="e.g. Expenses:Mercado" />
+          <input id="tx-dest" type="text" list="account-options" bind:value={newTx.destination} placeholder="Search or type new..." autocomplete="off" />
         </div>
       </div>
 
