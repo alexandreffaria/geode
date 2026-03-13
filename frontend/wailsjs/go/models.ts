@@ -1,13 +1,15 @@
 export namespace main {
 	
 	export class Transaction {
-	    account: string;
+	    id: string;
 	    date: string;
+	    source: string;
+	    destination: string;
+	    amount: number;
+	    currency: string;
 	    description: string;
-	    category: string;
-	    value: number;
 	    status: string;
-	    matchedWith: string;
+	    tags: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Transaction(source);
@@ -15,13 +17,15 @@ export namespace main {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.account = source["account"];
+	        this.id = source["id"];
 	        this.date = source["date"];
+	        this.source = source["source"];
+	        this.destination = source["destination"];
+	        this.amount = source["amount"];
+	        this.currency = source["currency"];
 	        this.description = source["description"];
-	        this.category = source["category"];
-	        this.value = source["value"];
 	        this.status = source["status"];
-	        this.matchedWith = source["matchedWith"];
+	        this.tags = source["tags"];
 	    }
 	}
 
