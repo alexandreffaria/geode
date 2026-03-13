@@ -3,9 +3,14 @@
   
   let transactions = [];
   
-  // --- MODAL STATE ---
+  // --- MODAL STATE & UI ---
   let showModal = false;
   let newTx = getEmptyTx();
+  
+  // User-friendly UI variables
+  let txMode = 'expense'; // 'expense', 'income', 'transfer'
+  let uiWallet = '';
+  let uiCategory = '';
 
   function getEmptyTx() {
     const today = new Date().toISOString().split('T')[0];
@@ -20,12 +25,40 @@
     };
   }
 
+  function resetModal() {
+    showModal = false;
+    newTx = getEmptyTx();
+    txMode = 'expense';
+    uiWallet = '';
+    uiCategory = '';
+  }
+
   async function handleSave() {
     newTx.amount = parseFloat(newTx.amount);
+
+    // --- THE RESOLVER ENGINE ---
+    // Finds the full accounting path based on your shortcut, or creates a new one safely
+    const resolveAccount = (shortName, defaultPrefix) => {
+        const cleanName = shortName.trim();
+        // Look for an existing account that ends with what you typed
+        const existing = allAccountNames.find(a => a.split(':').pop().toLowerCase() === cleanName.toLowerCase());
+        return existing ? existing : `${defaultPrefix}:${cleanName.replace(/\s+/g, '')}`;
+    };
+
+    if (txMode === 'expense') {
+        newTx.source = resolveAccount(uiWallet, 'Assets:Liquid');
+        newTx.destination = resolveAccount(uiCategory, 'Expenses');
+    } else if (txMode === 'income') {
+        newTx.source = resolveAccount(uiCategory, 'Income');
+        newTx.destination = resolveAccount(uiWallet, 'Assets:Liquid');
+    } else if (txMode === 'transfer') {
+        newTx.source = resolveAccount(uiWallet, 'Assets:Liquid');
+        newTx.destination = resolveAccount(uiCategory, 'Assets:Liquid');
+    }
+
     const success = await AddTransaction(newTx);
     if (success) {
-      showModal = false;
-      newTx = getEmptyTx(); 
+      resetModal();
       await loadData();     
     } else {
       alert("Failed to save transaction!");
@@ -43,8 +76,25 @@
       return acc;
   }, {});
 
+  // Extract Short Names for the Autocomplete Dropdowns!
   $: allAccountNames = Object.keys(accountBalances).sort();
+  
+  $: walletOptions = allAccountNames
+      .filter(a => a.startsWith('Assets') || a.startsWith('Liabilities'))
+      .map(a => a.split(':').pop());
 
+  $: expenseOptions = allAccountNames
+      .filter(a => a.startsWith('Expenses'))
+      .map(a => a.split(':').pop());
+
+  $: incomeOptions = allAccountNames
+      .filter(a => a.startsWith('Income'))
+      .map(a => a.split(':').pop());
+      
+  // Dynamically change the category dropdown based on if it's an expense, income, or transfer
+  $: currentCategoryOptions = txMode === 'expense' ? expenseOptions : (txMode === 'income' ? incomeOptions : walletOptions);
+
+  // --- DASHBOARD METRICS ---
   $: liquidCash = Object.entries(accountBalances)
       .filter(([name]) => name.startsWith("Assets:Liquid"))
       .reduce((sum, [_, bal]) => sum + bal, 0);
@@ -183,25 +233,38 @@
     class="modal-backdrop" 
     role="dialog"
     tabindex="-1"
-    on:click|self={() => showModal = false}
-    on:keydown|self={(e) => { if (e.key === 'Enter' || e.key === 'Escape') showModal = false; }}
+    on:click|self={resetModal}
+    on:keydown|self={(e) => { if (e.key === 'Enter' || e.key === 'Escape') resetModal(); }}
   >
     <div class="modal">
       <h2>Add Transaction</h2>
+
+      <div class="tabs">
+        <button class:active={txMode === 'expense'} on:click={() => txMode = 'expense'}>Expense</button>
+        <button class:active={txMode === 'income'} on:click={() => txMode = 'income'}>Income</button>
+        <button class:active={txMode === 'transfer'} on:click={() => txMode = 'transfer'}>Transfer</button>
+      </div>
       
       <div class="form-group">
         <label for="tx-date">Date</label>
         <input id="tx-date" type="date" bind:value={newTx.date} />
       </div>
 
-    <div class="form-group row">
+      <datalist id="wallet-options">
+        {#each walletOptions as opt} <option value={opt}></option> {/each}
+      </datalist>
+      <datalist id="category-options">
+        {#each currentCategoryOptions as opt} <option value={opt}></option> {/each}
+      </datalist>
+
+      <div class="form-group row">
         <div class="half">
-          <label for="tx-source">Source Account</label>
-          <input id="tx-source" type="text" list="account-options" bind:value={newTx.source} placeholder="Search or type new..." autocomplete="off" />
+          <label for="tx-wallet">{txMode === 'transfer' ? 'From Account' : 'Account'}</label>
+          <input id="tx-wallet" type="text" list="wallet-options" bind:value={uiWallet} placeholder="e.g. PagBank" autocomplete="off" />
         </div>
         <div class="half">
-          <label for="tx-dest">Destination Account</label>
-          <input id="tx-dest" type="text" list="account-options" bind:value={newTx.destination} placeholder="Search or type new..." autocomplete="off" />
+          <label for="tx-cat">{txMode === 'transfer' ? 'To Account' : 'Category'}</label>
+          <input id="tx-cat" type="text" list="category-options" bind:value={uiCategory} placeholder={txMode === 'expense' ? 'e.g. Mercado' : 'e.g. Salario'} autocomplete="off" />
         </div>
       </div>
 
@@ -227,7 +290,7 @@
       </div>
 
       <div class="modal-actions">
-        <button class="btn btn-secondary" on:click={() => showModal = false}>Cancel</button>
+        <button class="btn btn-secondary" on:click={resetModal}>Cancel</button>
         <button class="btn btn-primary" on:click={handleSave}>Save Transaction</button>
       </div>
     </div>
@@ -300,6 +363,12 @@
   .modal { background: #1e1e1e; padding: 2rem; border-radius: 12px; width: 500px; border: 1px solid #444; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
   .modal h2 { margin-top: 0; color: #eee; margin-bottom: 1.5rem; }
   
+  /* Modal Tabs */
+  .tabs { display: flex; gap: 5px; margin-bottom: 1.5rem; background: #111; padding: 5px; border-radius: 8px; border: 1px solid #333; }
+  .tabs button { flex: 1; padding: 8px; border: none; background: transparent; color: #888; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+  .tabs button:hover { color: #eee; }
+  .tabs button.active { background: #333; color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+
   .form-group { margin-bottom: 1.2rem; display: flex; flex-direction: column; }
   .form-group.row { flex-direction: row; gap: 1rem; }
   .half { flex: 1; display: flex; flex-direction: column; }
