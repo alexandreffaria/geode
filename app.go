@@ -2,26 +2,41 @@ package main
 
 import (
 	"context"
-	"encoding/csv"
 	"fmt"
-	"os"
-	"strconv"
-	"time"
+
+	"geode/internal/domain"
+	"geode/internal/service"
+	"geode/internal/storage"
 )
 
+// App struct
 type App struct {
-	ctx context.Context
+	ctx                context.Context
+	transactionService *service.TransactionService
 }
 
+// NewApp creates a new App application struct
 func NewApp() *App {
 	return &App{}
 }
 
+// startup is called when the app starts. The context is saved
+// so we can call the runtime methods
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
-	os.MkdirAll("vault", os.ModePerm)
+
+	// Initialize repository
+	repo, err := storage.NewCSVRepository("vault/geode.csv")
+	if err != nil {
+		fmt.Printf("Error initializing repository: %v\n", err)
+		return
+	}
+
+	// Initialize services
+	a.transactionService = service.NewTransactionService(repo)
 }
 
+// Transaction represents a financial transaction (exposed to frontend)
 type Transaction struct {
 	ID          string  `json:"id"`
 	Date        string  `json:"date"`
@@ -34,84 +49,54 @@ type Transaction struct {
 	Tags        string  `json:"tags"`
 }
 
-// AddTransaction appends a new record to the master CSV
+// AddTransaction adds a new transaction
 func (a *App) AddTransaction(tx Transaction) bool {
-	dbPath := "vault/geode.csv"
-
-	// 1. Auto-generate missing fields
-	if tx.ID == "" {
-		// Create a unique ID using the current timestamp
-		tx.ID = fmt.Sprintf("tx_%d", time.Now().UnixNano())
-	}
-	if tx.Status == "" {
-		tx.Status = "cleared"
-	}
-	if tx.Currency == "" {
-		tx.Currency = "BRL"
-	}
-
-	// 2. Open file in APPEND mode
-	file, err := os.OpenFile(dbPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		fmt.Println("Error opening geode.csv for writing:", err)
-		return false
-	}
-	defer file.Close()
-
-	writer := csv.NewWriter(file)
-	defer writer.Flush()
-
-	// 3. Format and write the row
-	row := []string{
-		tx.ID,
-		tx.Date,
-		tx.Source,
-		tx.Destination,
-		fmt.Sprintf("%.2f", tx.Amount),
-		tx.Currency,
-		tx.Description,
-		tx.Status,
-		tx.Tags,
+	// Convert frontend Transaction to domain Transaction
+	domainTx := &domain.Transaction{
+		ID:          tx.ID,
+		Date:        tx.Date,
+		Source:      tx.Source,
+		Destination: tx.Destination,
+		Amount:      tx.Amount,
+		Currency:    tx.Currency,
+		Description: tx.Description,
+		Status:      tx.Status,
+		Tags:        tx.Tags,
 	}
 
-	if err := writer.Write(row); err != nil {
-		fmt.Println("Error writing transaction:", err)
+	// Create transaction using service
+	if err := a.transactionService.Create(domainTx); err != nil {
+		fmt.Printf("Error adding transaction: %v\n", err)
 		return false
 	}
 
 	return true
 }
 
+// GetTransactions retrieves all transactions
 func (a *App) GetTransactions() []Transaction {
-	file, err := os.Open("vault/geode.csv")
+	// Get transactions from service
+	domainTxs, err := a.transactionService.GetAll()
 	if err != nil {
-		return []Transaction{}
-	}
-	defer file.Close()
-
-	reader := csv.NewReader(file)
-	records, err := reader.ReadAll()
-	if err != nil {
+		fmt.Printf("Error getting transactions: %v\n", err)
 		return []Transaction{}
 	}
 
+	// Convert domain transactions to frontend transactions
 	var transactions []Transaction
-	for i, row := range records {
-		if i == 0 || len(row) < 9 {
-			continue
-		}
-		amount, _ := strconv.ParseFloat(row[4], 64)
+	for _, dtx := range domainTxs {
 		transactions = append(transactions, Transaction{
-			ID:          row[0],
-			Date:        row[1],
-			Source:      row[2],
-			Destination: row[3],
-			Amount:      amount,
-			Currency:    row[5],
-			Description: row[6],
-			Status:      row[7],
-			Tags:        row[8],
+			ID:          dtx.ID,
+			Date:        dtx.Date,
+			Source:      dtx.Source,
+			Destination: dtx.Destination,
+			Amount:      dtx.Amount,
+			Currency:    dtx.Currency,
+			Description: dtx.Description,
+			Status:      dtx.Status,
+			Tags:        dtx.Tags,
 		})
 	}
+
 	return transactions
 }
