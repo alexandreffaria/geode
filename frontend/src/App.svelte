@@ -1,40 +1,99 @@
 <script>
-  import { GetTransactions, AddTransaction } from '../wailsjs/go/main/App.js';
+  import { GetTransactions, AddTransaction, UpdateTransaction, DeleteTransaction } from '../wailsjs/go/main/App.js';
   
   let transactions = [];
   
   // --- MODAL STATE & UI ---
   let showModal = false;
+  let modalMode = 'add'; // 'add' or 'edit'
+  let editingTransaction = null;
   let newTx = getEmptyTx();
   
   // User-friendly UI variables
   let txMode = 'expense'; // 'expense', 'income', 'transfer'
   let uiWallet = '';
   let uiCategory = '';
+  
+  // Confirmation dialog state
+  let showDeleteConfirm = false;
+  let deleteTargetId = null;
 
   function getEmptyTx() {
     const today = new Date().toISOString().split('T')[0];
     return {
+      id: '',
       date: today,
       source: '',
       destination: '',
       amount: 0,
       description: '',
       currency: 'BRL',
-      tags: ''
+      tags: '',
+      status: 'completed'
     };
   }
 
   function resetModal() {
     showModal = false;
+    modalMode = 'add';
+    editingTransaction = null;
     newTx = getEmptyTx();
     txMode = 'expense';
     uiWallet = '';
     uiCategory = '';
   }
+  
+  function openEditModal(tx) {
+    editingTransaction = tx;
+    modalMode = 'edit';
+    newTx = { ...tx };
+    
+    // Determine the transaction mode based on source/destination
+    if (tx.source.startsWith('Income')) {
+      txMode = 'income';
+      uiCategory = tx.source.split(':').pop();
+      uiWallet = tx.destination.split(':').pop();
+    } else if (tx.destination.startsWith('Expenses')) {
+      txMode = 'expense';
+      uiWallet = tx.source.split(':').pop();
+      uiCategory = tx.destination.split(':').pop();
+    } else {
+      txMode = 'transfer';
+      uiWallet = tx.source.split(':').pop();
+      uiCategory = tx.destination.split(':').pop();
+    }
+    
+    showModal = true;
+  }
+  
+  function confirmDelete(id) {
+    deleteTargetId = id;
+    showDeleteConfirm = true;
+  }
+  
+  async function handleDelete() {
+    if (!deleteTargetId) return;
+    
+    const success = await DeleteTransaction(deleteTargetId);
+    if (success) {
+      showDeleteConfirm = false;
+      deleteTargetId = null;
+      await loadData();
+    } else {
+      alert("Failed to delete transaction!");
+    }
+  }
+  
+  function cancelDelete() {
+    showDeleteConfirm = false;
+    deleteTargetId = null;
+  }
 
   async function handleSave() {
-    newTx.amount = parseFloat(newTx.amount);
+    // Ensure amount is a number
+    if (typeof newTx.amount === 'string') {
+      newTx.amount = parseFloat(newTx.amount);
+    }
 
     // --- THE RESOLVER ENGINE ---
     // Finds the full accounting path based on your shortcut, or creates a new one safely
@@ -56,12 +115,18 @@
         newTx.destination = resolveAccount(uiCategory, 'Assets:Liquid');
     }
 
-    const success = await AddTransaction(newTx);
+    let success;
+    if (modalMode === 'edit') {
+      success = await UpdateTransaction(newTx);
+    } else {
+      success = await AddTransaction(newTx);
+    }
+    
     if (success) {
       resetModal();
       await loadData();     
     } else {
-      alert("Failed to save transaction!");
+      alert(`Failed to ${modalMode === 'edit' ? 'update' : 'save'} transaction!`);
     }
   }
 
@@ -128,7 +193,11 @@
       .filter(acc => Math.abs(acc.balance) > 0.01)
       .sort((a, b) => a.fullName.localeCompare(b.fullName));
 
-  $: sortedTransactions = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+  $: sortedTransactions = [...transactions].sort((a, b) => {
+    const dateA = new Date(a.date);
+    const dateB = new Date(b.date);
+    return dateB.getTime() - dateA.getTime();
+  });
 
   loadData();
 
@@ -195,11 +264,12 @@
             <th>Description</th>
             <th>Amount</th>
             <th>Tags</th>
+            <th class="actions-col">Actions</th>
           </tr>
         </thead>
         <tbody>
           {#each sortedTransactions as tx}
-            <tr>
+            <tr class="transaction-row" on:click={() => openEditModal(tx)}>
               <td class="date-col">{tx.date}</td>
               <td class="flow-col">
                  <span class="pill source">{tx.source.split(':').pop()}</span>
@@ -214,6 +284,22 @@
                 {#if tx.tags}
                   <span class="tag">{tx.tags}</span>
                 {/if}
+              </td>
+              <td class="actions-col">
+                <button 
+                  class="btn-icon edit" 
+                  on:click|stopPropagation={() => openEditModal(tx)}
+                  title="Edit transaction"
+                >
+                  ✏️
+                </button>
+                <button 
+                  class="btn-icon delete" 
+                  on:click|stopPropagation={() => confirmDelete(tx.id)}
+                  title="Delete transaction"
+                >
+                  🗑️
+                </button>
               </td>
             </tr>
           {/each}
@@ -237,7 +323,7 @@
     on:keydown|self={(e) => { if (e.key === 'Enter' || e.key === 'Escape') resetModal(); }}
   >
     <div class="modal">
-      <h2>Add Transaction</h2>
+      <h2>{modalMode === 'edit' ? 'Edit Transaction' : 'Add Transaction'}</h2>
 
       <div class="tabs">
         <button class:active={txMode === 'expense'} on:click={() => txMode = 'expense'}>Expense</button>
@@ -291,7 +377,28 @@
 
       <div class="modal-actions">
         <button class="btn btn-secondary" on:click={resetModal}>Cancel</button>
-        <button class="btn btn-primary" on:click={handleSave}>Save Transaction</button>
+        <button class="btn btn-primary" on:click={handleSave}>
+          {modalMode === 'edit' ? 'Update' : 'Save Transaction'}
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+{#if showDeleteConfirm}
+  <div 
+    class="modal-backdrop" 
+    role="dialog"
+    tabindex="-1"
+    on:click|self={cancelDelete}
+    on:keydown|self={(e) => { if (e.key === 'Escape') cancelDelete(); }}
+  >
+    <div class="modal confirm-dialog">
+      <h2>⚠️ Confirm Delete</h2>
+      <p>Are you sure you want to delete this transaction? This action cannot be undone.</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" on:click={cancelDelete}>Cancel</button>
+        <button class="btn btn-danger" on:click={handleDelete}>Delete</button>
       </div>
     </div>
   </div>
@@ -309,6 +416,8 @@
   .btn-primary:hover { background-color: #b795ff; }
   .btn-secondary { background-color: #2a2a2a; color: #fff; border: 1px solid #444; }
   .btn-secondary:hover { background-color: #333; }
+  .btn-danger { background-color: #dc2626; color: #fff; }
+  .btn-danger:hover { background-color: #ef4444; }
 
   /* Dashboard Cards */
   .dashboard { display: grid; gap: 1rem; margin-bottom: 2rem; }
@@ -341,6 +450,9 @@
   th, td { padding: 14px 16px; text-align: left; border-bottom: 1px solid #222; }
   th { background-color: #111; font-weight: 600; color: #888; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1px; }
   
+  .transaction-row { cursor: pointer; transition: background-color 0.2s; }
+  .transaction-row:hover { background-color: #222; }
+  
   .date-col { color: #888; font-family: monospace; }
   .amount-col strong { font-size: 1.1rem; }
   .amount-col small { color: #666; font-weight: bold; }
@@ -352,6 +464,12 @@
   .arrow { color: #555; font-size: 0.8rem; }
   .tag { background: #2b2244; color: #a882ff; font-size: 0.75rem; padding: 3px 8px; border-radius: 4px; border: 1px solid #3d2f60; }
   
+  .actions-col { width: 100px; text-align: right; }
+  .btn-icon { background: transparent; border: none; cursor: pointer; font-size: 1.2rem; padding: 4px 8px; border-radius: 4px; transition: background-color 0.2s; opacity: 0.6; }
+  .btn-icon:hover { opacity: 1; background-color: #333; }
+  .btn-icon.delete:hover { background-color: rgba(220, 38, 38, 0.2); }
+  .btn-icon.edit:hover { background-color: rgba(168, 130, 255, 0.2); }
+  
   .positive { color: #4ade80; }
   .negative { color: #f87171; }
   
@@ -362,6 +480,9 @@
   .modal-backdrop { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 100; backdrop-filter: blur(4px); }
   .modal { background: #1e1e1e; padding: 2rem; border-radius: 12px; width: 500px; border: 1px solid #444; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
   .modal h2 { margin-top: 0; color: #eee; margin-bottom: 1.5rem; }
+  
+  .confirm-dialog { width: 400px; }
+  .confirm-dialog p { color: #ccc; margin-bottom: 1.5rem; line-height: 1.5; }
   
   /* Modal Tabs */
   .tabs { display: flex; gap: 5px; margin-bottom: 1.5rem; background: #111; padding: 5px; border-radius: 8px; border: 1px solid #333; }

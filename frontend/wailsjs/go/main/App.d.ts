@@ -4,4 +4,8 @@ import {main} from '../models';
 
 export function AddTransaction(arg1:main.Transaction):Promise<boolean>;
 
+export function DeleteTransaction(arg1:string):Promise<boolean>;
+
 export function GetTransactions():Promise<Array<main.Transaction>>;
+
+export function UpdateTransaction(arg1:main.Transaction):Promise<boolean>;
