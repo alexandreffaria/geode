@@ -68,37 +68,33 @@ func (s *LedgerService) CreateTransaction(transaction *models.Transaction) (*mod
 func (s *LedgerService) updateAccountBalances(transaction *models.Transaction) error {
 	switch transaction.Type {
 	case models.TransactionTypePurchase:
-		// Money leaves from_account
-		if err := s.adjustAccountBalance(transaction.FromAccount, -transaction.Amount); err != nil {
-			return err
-		}
-		// If to_account is specified (expense category), increase its balance
-		if transaction.ToAccount != "" {
-			if err := s.adjustAccountBalance(transaction.ToAccount, transaction.Amount); err != nil {
+		// Money leaves the account (category is just metadata, no balance tracking)
+		if transaction.Account != nil && *transaction.Account != "" {
+			if err := s.adjustAccountBalance(*transaction.Account, -transaction.Amount); err != nil {
 				return err
 			}
 		}
 
 	case models.TransactionTypeEarning:
-		// Money enters to_account
-		if err := s.adjustAccountBalance(transaction.ToAccount, transaction.Amount); err != nil {
-			return err
-		}
-		// If from_account is specified (income source), decrease its balance
-		if transaction.FromAccount != "" {
-			if err := s.adjustAccountBalance(transaction.FromAccount, -transaction.Amount); err != nil {
+		// Money enters the account (category is just metadata, no balance tracking)
+		if transaction.Account != nil && *transaction.Account != "" {
+			if err := s.adjustAccountBalance(*transaction.Account, transaction.Amount); err != nil {
 				return err
 			}
 		}
 
 	case models.TransactionTypeTransfer:
 		// Money leaves from_account
-		if err := s.adjustAccountBalance(transaction.FromAccount, -transaction.Amount); err != nil {
-			return err
+		if transaction.FromAccount != nil && *transaction.FromAccount != "" {
+			if err := s.adjustAccountBalance(*transaction.FromAccount, -transaction.Amount); err != nil {
+				return err
+			}
 		}
 		// Money enters to_account
-		if err := s.adjustAccountBalance(transaction.ToAccount, transaction.Amount); err != nil {
-			return err
+		if transaction.ToAccount != nil && *transaction.ToAccount != "" {
+			if err := s.adjustAccountBalance(*transaction.ToAccount, transaction.Amount); err != nil {
+				return err
+			}
 		}
 	}
 

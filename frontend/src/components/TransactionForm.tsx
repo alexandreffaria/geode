@@ -1,4 +1,4 @@
-import { useState, FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import type { TransactionFormData, TransactionType, Account } from "../types";
 import { apiService } from "../services/api";
 import "./TransactionForm.css";
@@ -15,8 +15,8 @@ export function TransactionForm({
   const [formData, setFormData] = useState<TransactionFormData>({
     type: "purchase",
     amount: "",
-    from_account: "",
-    to_account: "",
+    account: "",
+    category: "",
     description: "",
   });
   const [loading, setLoading] = useState(false);
@@ -32,13 +32,24 @@ export function TransactionForm({
     try {
       await apiService.addTransaction(formData);
       setSuccess(true);
-      setFormData({
-        type: "purchase",
-        amount: "",
-        from_account: "",
-        to_account: "",
-        description: "",
-      });
+      // Reset form based on current type
+      if (formData.type === "transfer") {
+        setFormData({
+          type: "transfer",
+          amount: "",
+          from_account: "",
+          to_account: "",
+          description: "",
+        });
+      } else {
+        setFormData({
+          type: formData.type,
+          amount: "",
+          account: "",
+          category: "",
+          description: "",
+        });
+      }
       onTransactionAdded();
 
       // Clear success message after 3 seconds
@@ -53,7 +64,24 @@ export function TransactionForm({
   };
 
   const handleTypeChange = (type: TransactionType) => {
-    setFormData({ ...formData, type });
+    // Reset form data when type changes
+    if (type === "transfer") {
+      setFormData({
+        type: "transfer",
+        amount: "",
+        from_account: "",
+        to_account: "",
+        description: "",
+      });
+    } else {
+      setFormData({
+        type: type,
+        amount: "",
+        account: "",
+        category: "",
+        description: "",
+      });
+    }
   };
 
   return (
@@ -92,43 +120,88 @@ export function TransactionForm({
           />
         </div>
 
-        <div className="form-group">
-          <label htmlFor="from_account">From Account</label>
-          <select
-            id="from_account"
-            value={formData.from_account}
-            onChange={(e) =>
-              setFormData({ ...formData, from_account: e.target.value })
-            }
-            required
-          >
-            <option value="">Select account...</option>
-            {accounts.map((account) => (
-              <option key={account.id} value={account.id}>
-                {account.name} (${account.balance.toFixed(2)})
-              </option>
-            ))}
-          </select>
-        </div>
+        {formData.type === "transfer" ? (
+          <>
+            <div className="form-group">
+              <label htmlFor="from_account">From Account</label>
+              <select
+                id="from_account"
+                value={formData.from_account}
+                onChange={(e) =>
+                  setFormData({ ...formData, from_account: e.target.value })
+                }
+                required
+              >
+                <option value="">Select account...</option>
+                {accounts.map((account) => (
+                  <option key={account.id} value={account.name}>
+                    {account.name} (${account.balance.toFixed(2)})
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        <div className="form-group">
-          <label htmlFor="to_account">To Account</label>
-          <select
-            id="to_account"
-            value={formData.to_account}
-            onChange={(e) =>
-              setFormData({ ...formData, to_account: e.target.value })
-            }
-            required
-          >
-            <option value="">Select account...</option>
-            {accounts.map((account) => (
-              <option key={account.id} value={account.id}>
-                {account.name} (${account.balance.toFixed(2)})
-              </option>
-            ))}
-          </select>
-        </div>
+            <div className="form-group">
+              <label htmlFor="to_account">To Account</label>
+              <select
+                id="to_account"
+                value={formData.to_account}
+                onChange={(e) =>
+                  setFormData({ ...formData, to_account: e.target.value })
+                }
+                required
+              >
+                <option value="">Select account...</option>
+                {accounts.map((account) => (
+                  <option key={account.id} value={account.name}>
+                    {account.name} (${account.balance.toFixed(2)})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="form-group">
+              <label htmlFor="account">
+                {formData.type === "purchase" ? "From Account" : "To Account"}
+              </label>
+              <select
+                id="account"
+                value={formData.account}
+                onChange={(e) =>
+                  setFormData({ ...formData, account: e.target.value })
+                }
+                required
+              >
+                <option value="">Select account...</option>
+                {accounts.map((account) => (
+                  <option key={account.id} value={account.name}>
+                    {account.name} (${account.balance.toFixed(2)})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="category">Category</label>
+              <input
+                id="category"
+                type="text"
+                value={formData.category}
+                onChange={(e) =>
+                  setFormData({ ...formData, category: e.target.value })
+                }
+                placeholder={
+                  formData.type === "purchase"
+                    ? "e.g., Groceries, Coffee, Rent"
+                    : "e.g., Salary, Freelance, Gift"
+                }
+                required
+              />
+            </div>
+          </>
+        )}
 
         <div className="form-group">
           <label htmlFor="description">Description</label>

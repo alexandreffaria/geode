@@ -1,0 +1,38 @@
+[
+  {
+    "id": "f358404c-cfd0-4309-bd05-d194d3a6085e",
+    "date": "2026-03-24T00:00:00Z",
+    "type": "purchase",
+    "amount": 125.5,
+    "from_account": "Checking Account",
+    "to_account": "Groceries",
+    "description": "Grocery shopping at Whole Foods"
+  },
+  {
+    "id": "abe62452-2833-4adb-b025-b0f4db871897",
+    "date": "2026-03-24T00:00:00Z",
+    "type": "earning",
+    "amount": 5000,
+    "from_account": "Employer",
+    "to_account": "Checking Account",
+    "description": "Monthly salary from employer"
+  },
+  {
+    "id": "6ba2575a-bed2-4788-9545-b2c0d25547a3",
+    "date": "2026-03-24T00:00:00Z",
+    "type": "transfer",
+    "amount": 1000,
+    "from_account": "Checking Account",
+    "to_account": "Savings Account",
+    "description": "Transfer to savings"
+  },
+  {
+    "id": "183a2503-9153-4e49-b178-2403e6acb4b6",
+    "date": "2026-03-24T00:00:00Z",
+    "type": "purchase",
+    "amount": 5.75,
+    "from_account": "Checking Account",
+    "to_account": "Coffee",
+    "description": "Coffee at Starbucks"
+  }
+]

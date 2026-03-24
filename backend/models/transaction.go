@@ -20,9 +20,15 @@ type Transaction struct {
 	Date        time.Time       `json:"date"`
 	Type        TransactionType `json:"type"`
 	Amount      float64         `json:"amount"`
-	FromAccount string          `json:"from_account"`
-	ToAccount   string          `json:"to_account"`
 	Description string          `json:"description"`
+
+	// For purchase/earning transactions
+	Account  *string `json:"account,omitempty"`
+	Category *string `json:"category,omitempty"`
+
+	// For transfer transactions only
+	FromAccount *string `json:"from_account,omitempty"`
+	ToAccount   *string `json:"to_account,omitempty"`
 }
 
 // Validate checks if the transaction is valid
@@ -33,20 +39,41 @@ func (t *Transaction) Validate() error {
 
 	switch t.Type {
 	case TransactionTypePurchase:
-		if t.FromAccount == "" {
-			return errors.New("from_account is required for purchase transactions")
+		if t.Account == nil || *t.Account == "" {
+			return errors.New("account is required for purchase transactions")
 		}
+		if t.Category == nil || *t.Category == "" {
+			return errors.New("category is required for purchase transactions")
+		}
+		if t.FromAccount != nil || t.ToAccount != nil {
+			return errors.New("purchase transactions cannot have from_account or to_account fields")
+		}
+
 	case TransactionTypeEarning:
-		if t.ToAccount == "" {
-			return errors.New("to_account is required for earning transactions")
+		if t.Account == nil || *t.Account == "" {
+			return errors.New("account is required for earning transactions")
 		}
+		if t.Category == nil || *t.Category == "" {
+			return errors.New("category is required for earning transactions")
+		}
+		if t.FromAccount != nil || t.ToAccount != nil {
+			return errors.New("earning transactions cannot have from_account or to_account fields")
+		}
+
 	case TransactionTypeTransfer:
-		if t.FromAccount == "" || t.ToAccount == "" {
-			return errors.New("both from_account and to_account are required for transfer transactions")
+		if t.FromAccount == nil || *t.FromAccount == "" {
+			return errors.New("from_account is required for transfer transactions")
 		}
-		if t.FromAccount == t.ToAccount {
+		if t.ToAccount == nil || *t.ToAccount == "" {
+			return errors.New("to_account is required for transfer transactions")
+		}
+		if *t.FromAccount == *t.ToAccount {
 			return errors.New("from_account and to_account cannot be the same for transfers")
 		}
+		if t.Account != nil || t.Category != nil {
+			return errors.New("transfer transactions cannot have account or category fields")
+		}
+
 	default:
 		return errors.New("invalid transaction type: must be purchase, earning, or transfer")
 	}
@@ -57,11 +84,22 @@ func (t *Transaction) Validate() error {
 // GetAffectedAccounts returns the accounts affected by this transaction
 func (t *Transaction) GetAffectedAccounts() []string {
 	accounts := []string{}
-	if t.FromAccount != "" {
-		accounts = append(accounts, t.FromAccount)
+
+	switch t.Type {
+	case TransactionTypePurchase, TransactionTypeEarning:
+		// Only the account field matters, not the category
+		if t.Account != nil && *t.Account != "" {
+			accounts = append(accounts, *t.Account)
+		}
+	case TransactionTypeTransfer:
+		// Both from and to accounts are affected
+		if t.FromAccount != nil && *t.FromAccount != "" {
+			accounts = append(accounts, *t.FromAccount)
+		}
+		if t.ToAccount != nil && *t.ToAccount != "" {
+			accounts = append(accounts, *t.ToAccount)
+		}
 	}
-	if t.ToAccount != "" {
-		accounts = append(accounts, t.ToAccount)
-	}
+
 	return accounts
 }

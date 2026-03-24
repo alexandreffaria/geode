@@ -21,6 +21,31 @@ export function TransactionList({ transactions }: TransactionListProps) {
     return type.charAt(0).toUpperCase() + type.slice(1);
   };
 
+  const getFromField = (transaction: Transaction) => {
+    if (transaction.type === "transfer") {
+      return transaction.from_account;
+    } else if (transaction.type === "purchase") {
+      return transaction.account;
+    }
+    return "—"; // earning has no "from"
+  };
+
+  const getToField = (transaction: Transaction) => {
+    if (transaction.type === "transfer") {
+      return transaction.to_account;
+    } else if (transaction.type === "earning") {
+      return transaction.account;
+    }
+    return "—"; // purchase has no "to"
+  };
+
+  const getCategoryField = (transaction: Transaction) => {
+    if (transaction.type === "purchase" || transaction.type === "earning") {
+      return transaction.category;
+    }
+    return "—"; // transfer has no category
+  };
+
   return (
     <div className="transaction-list-container">
       <h2>Transaction History</h2>
@@ -36,8 +61,8 @@ export function TransactionList({ transactions }: TransactionListProps) {
                 <th>Date</th>
                 <th>Type</th>
                 <th>Description</th>
-                <th>From</th>
-                <th>To</th>
+                <th>Account/From</th>
+                <th>Category/To</th>
                 <th className="amount-column">Amount</th>
               </tr>
             </thead>
@@ -55,8 +80,12 @@ export function TransactionList({ transactions }: TransactionListProps) {
                   <td className="description-cell">
                     {transaction.description}
                   </td>
-                  <td className="account-cell">{transaction.from_account}</td>
-                  <td className="account-cell">{transaction.to_account}</td>
+                  <td className="account-cell">{getFromField(transaction)}</td>
+                  <td className="account-cell">
+                    {getCategoryField(transaction) !== "—"
+                      ? getCategoryField(transaction)
+                      : getToField(transaction)}
+                  </td>
                   <td className="amount-cell">
                     <span
                       className={`amount ${transaction.type === "earning" ? "positive" : "negative"}`}

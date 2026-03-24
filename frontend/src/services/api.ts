@@ -24,18 +24,28 @@ class ApiService {
   }
 
   async addTransaction(data: TransactionFormData): Promise<Transaction> {
+    let payload: any = {
+      type: data.type,
+      amount: parseFloat(data.amount),
+      description: data.description,
+    };
+
+    // Add type-specific fields
+    if (data.type === "transfer") {
+      payload.from_account = data.from_account;
+      payload.to_account = data.to_account;
+    } else {
+      // purchase or earning
+      payload.account = data.account;
+      payload.category = data.category;
+    }
+
     const response = await fetch(`${API_BASE_URL}/transactions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        type: data.type,
-        amount: parseFloat(data.amount),
-        from_account: data.from_account,
-        to_account: data.to_account,
-        description: data.description,
-      }),
+      body: JSON.stringify(payload),
     });
     return this.handleResponse<Transaction>(response);
   }
