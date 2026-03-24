@@ -1,0 +1,137 @@
+.transaction-list-container {
+  background: #1e1e1e;
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.transaction-list-container h2 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  color: #e0e0e0;
+  font-size: 1.5rem;
+}
+
+.no-transactions {
+  color: #888;
+  text-align: center;
+  padding: 40px 20px;
+  font-style: italic;
+}
+
+.transaction-table-wrapper {
+  overflow-x: auto;
+}
+
+.transaction-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.transaction-table thead {
+  background: #2a2a2a;
+}
+
+.transaction-table th {
+  padding: 12px;
+  text-align: left;
+  color: #b0b0b0;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #3a3a3a;
+}
+
+.transaction-table td {
+  padding: 14px 12px;
+  color: #e0e0e0;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.transaction-table tbody tr {
+  transition: background 0.2s;
+}
+
+.transaction-table tbody tr:hover {
+  background: #252525;
+}
+
+.date-cell {
+  color: #999;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.type-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.type-purchase {
+  background: #4a1e1e;
+  color: #ff6b6b;
+}
+
+.type-earning {
+  background: #1e4a1e;
+  color: #6bff6b;
+}
+
+.type-transfer {
+  background: #1e3a4a;
+  color: #6bb6ff;
+}
+
+.description-cell {
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-cell {
+  color: #aaa;
+  font-size: 0.95rem;
+}
+
+.amount-column {
+  text-align: right;
+}
+
+.amount-cell {
+  text-align: right;
+}
+
+.amount {
+  font-weight: 600;
+  font-size: 1rem;
+  font-family: "Courier New", monospace;
+}
+
+.amount.positive {
+  color: #6bff6b;
+}
+
+.amount.negative {
+  color: #ff6b6b;
+}
+
+@media (max-width: 768px) {
+  .transaction-table {
+    font-size: 0.9rem;
+  }
+
+  .transaction-table th,
+  .transaction-table td {
+    padding: 10px 8px;
+  }
+
+  .description-cell {
+    max-width: 150px;
+  }
+}
