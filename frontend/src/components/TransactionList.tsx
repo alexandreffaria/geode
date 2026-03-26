@@ -1,26 +1,22 @@
 import type { Transaction } from "../types";
+import {
+  formatDate,
+  formatAmount,
+  getTransactionTypeLabel,
+} from "../utils/transactionUtils";
 import "./TransactionList.css";
 
 interface TransactionListProps {
   transactions: Transaction[];
+  onEditTransaction: (transaction: Transaction) => void;
+  onDeleteTransaction: (transaction: Transaction) => void;
 }
 
-export function TransactionList({ transactions }: TransactionListProps) {
-  const formatDate = (timestamp: string) => {
-    const date = new Date(timestamp);
-    return date.toLocaleString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const getTransactionTypeLabel = (type: string) => {
-    return type.charAt(0).toUpperCase() + type.slice(1);
-  };
-
+export function TransactionList({
+  transactions,
+  onEditTransaction,
+  onDeleteTransaction,
+}: TransactionListProps) {
   const getFromField = (transaction: Transaction) => {
     if (transaction.type === "transfer") {
       return transaction.from_account;
@@ -64,21 +60,20 @@ export function TransactionList({ transactions }: TransactionListProps) {
                 <th>Account/From</th>
                 <th>Category/To</th>
                 <th className="amount-column">Amount</th>
+                <th className="actions-column">Actions</th>
               </tr>
             </thead>
             <tbody>
               {transactions.map((transaction) => (
                 <tr key={transaction.id}>
-                  <td className="date-cell">
-                    {formatDate(transaction.timestamp)}
-                  </td>
+                  <td className="date-cell">{formatDate(transaction.date)}</td>
                   <td>
                     <span className={`type-badge type-${transaction.type}`}>
                       {getTransactionTypeLabel(transaction.type)}
                     </span>
                   </td>
                   <td className="description-cell">
-                    {transaction.description}
+                    {transaction.description || "—"}
                   </td>
                   <td className="account-cell">{getFromField(transaction)}</td>
                   <td className="account-cell">
@@ -90,9 +85,24 @@ export function TransactionList({ transactions }: TransactionListProps) {
                     <span
                       className={`amount ${transaction.type === "earning" ? "positive" : "negative"}`}
                     >
-                      {transaction.type === "earning" ? "+" : "-"}$
-                      {transaction.amount.toFixed(2)}
+                      {formatAmount(transaction.amount, transaction.type)}
                     </span>
+                  </td>
+                  <td className="actions-cell">
+                    <button
+                      className="edit-button"
+                      onClick={() => onEditTransaction(transaction)}
+                      aria-label={`Edit transaction: ${transaction.description || "No description"}`}
+                    >
+                      ✏️ Edit
+                    </button>
+                    <button
+                      className="delete-button"
+                      onClick={() => onDeleteTransaction(transaction)}
+                      aria-label={`Delete transaction: ${transaction.description || "No description"}`}
+                    >
+                      🗑️ Delete
+                    </button>
                   </td>
                 </tr>
               ))}

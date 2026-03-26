@@ -24,70 +24,138 @@ func NewTransactionHandler(ledger *services.LedgerService) *TransactionHandler {
 // CreateTransaction handles POST /api/transactions
 func (h *TransactionHandler) CreateTransaction(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 
 	var transaction models.Transaction
 	if err := json.NewDecoder(r.Body).Decode(&transaction); err != nil {
 		log.Printf("Error decoding transaction: %v", err)
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		WriteError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
 	createdTransaction, err := h.ledger.CreateTransaction(&transaction)
 	if err != nil {
 		log.Printf("Error creating transaction: %v", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(createdTransaction)
+	WriteJSON(w, http.StatusCreated, createdTransaction)
 	log.Printf("Transaction created: %s (type: %s, amount: %.2f)", createdTransaction.ID, createdTransaction.Type, createdTransaction.Amount)
 }
 
 // GetAllTransactions handles GET /api/transactions
 func (h *TransactionHandler) GetAllTransactions(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 
 	transactions, err := h.ledger.GetAllTransactions()
 	if err != nil {
 		log.Printf("Error getting transactions: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		WriteError(w, http.StatusInternalServerError, "Internal server error")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(transactions)
+	WriteJSON(w, http.StatusOK, transactions)
 	log.Printf("Retrieved %d transactions", len(transactions))
 }
 
 // GetTransactionByID handles GET /api/transactions/:id
 func (h *TransactionHandler) GetTransactionByID(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 
 	// Extract ID from URL path (simple implementation)
 	id := r.URL.Path[len("/api/transactions/"):]
 	if id == "" {
-		http.Error(w, "Transaction ID required", http.StatusBadRequest)
+		WriteError(w, http.StatusBadRequest, "Transaction ID required")
 		return
 	}
 
 	transaction, err := h.ledger.GetTransactionByID(id)
 	if err != nil {
 		log.Printf("Error getting transaction: %v", err)
-		http.Error(w, "Transaction not found", http.StatusNotFound)
+		WriteError(w, http.StatusNotFound, "Transaction not found")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(transaction)
+	WriteJSON(w, http.StatusOK, transaction)
+}
+
+// UpdateTransaction handles PUT /api/transactions/:id
+func (h *TransactionHandler) UpdateTransaction(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	// Extract ID from URL
+	id := r.URL.Path[len("/api/transactions/"):]
+	if id == "" {
+		WriteError(w, http.StatusBadRequest, "Transaction ID required")
+		return
+	}
+
+	var updatedTransaction models.Transaction
+	if err := json.NewDecoder(r.Body).Decode(&updatedTransaction); err != nil {
+		log.Printf("Error decoding transaction: %v", err)
+		WriteError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	// Ensure ID matches URL
+	updatedTransaction.ID = id
+
+	result, err := h.ledger.UpdateTransaction(&updatedTransaction)
+	if err != nil {
+		log.Printf("Error updating transaction: %v", err)
+		// Determine appropriate status code
+		if err.Error() == "transaction not found" {
+			WriteError(w, http.StatusNotFound, err.Error())
+		} else {
+			WriteError(w, http.StatusBadRequest, err.Error())
+		}
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, result)
+	log.Printf("Transaction updated: %s (type: %s, amount: %.2f)", result.ID, result.Type, result.Amount)
+}
+
+// DeleteTransaction handles DELETE /api/transactions/:id
+func (h *TransactionHandler) DeleteTransaction(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	// Extract ID from URL
+	id := r.URL.Path[len("/api/transactions/"):]
+	if id == "" {
+		WriteError(w, http.StatusBadRequest, "Transaction ID required")
+		return
+	}
+
+	// Delete the transaction
+	err := h.ledger.DeleteTransaction(id)
+	if err != nil {
+		log.Printf("Error deleting transaction: %v", err)
+		// Determine appropriate status code
+		if err.Error() == "transaction not found" {
+			WriteError(w, http.StatusNotFound, err.Error())
+		} else {
+			WriteError(w, http.StatusInternalServerError, err.Error())
+		}
+		return
+	}
+
+	// Return 204 No Content on success
+	w.WriteHeader(http.StatusNoContent)
+	log.Printf("Transaction deleted: %s", id)
 }

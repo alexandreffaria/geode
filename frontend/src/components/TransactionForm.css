@@ -1,18 +1,4 @@
-.transaction-form-container {
-  background: #1e1e1e;
-  border-radius: 8px;
-  padding: 24px;
-  margin-bottom: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}
-
-.transaction-form-container h2 {
-  margin-top: 0;
-  margin-bottom: 20px;
-  color: #e0e0e0;
-  font-size: 1.5rem;
-}
-
+/* Form styles - no container, as modal handles that */
 .transaction-form {
   display: flex;
   flex-direction: column;
@@ -52,17 +38,50 @@
   color: #666;
 }
 
-.submit-button {
+.form-group select:disabled {
+  background: #1a1a1a;
+  color: #666;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Date input specific styles */
+.form-group input[type="datetime-local"] {
+  color-scheme: dark;
+}
+
+.form-group input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}
+
+/* Form actions (buttons container) */
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+/* When only one button (legacy mode), make it full width */
+.form-actions:has(button:only-child) {
+  justify-content: stretch;
+}
+
+.submit-button,
+.cancel-button {
+  flex: 1;
   padding: 12px 24px;
-  background: #4a9eff;
-  color: white;
   border: none;
   border-radius: 4px;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
-  margin-top: 8px;
+}
+
+.submit-button {
+  background: #4a9eff;
+  color: white;
 }
 
 .submit-button:hover:not(:disabled) {
@@ -72,6 +91,22 @@
 .submit-button:disabled {
   background: #3a3a3a;
   color: #666;
+  cursor: not-allowed;
+}
+
+.cancel-button {
+  background: #2a2a2a;
+  color: #b0b0b0;
+  border: 1px solid #3a3a3a;
+}
+
+.cancel-button:hover:not(:disabled) {
+  background: #3a3a3a;
+  color: #e0e0e0;
+}
+
+.cancel-button:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
@@ -91,4 +126,20 @@
   border-radius: 4px;
   color: #6bff6b;
   font-size: 0.9rem;
+}
+
+/* Legacy container styles for backward compatibility if form is used standalone */
+.transaction-form-container {
+  background: #1e1e1e;
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.transaction-form-container h2 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  color: #e0e0e0;
+  font-size: 1.5rem;
 }

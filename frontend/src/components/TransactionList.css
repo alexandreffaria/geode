@@ -121,6 +121,81 @@
   color: #ff6b6b;
 }
 
+/* Actions Column */
+.actions-column {
+  width: 180px;
+  text-align: center;
+}
+
+.actions-cell {
+  padding: 8px;
+  text-align: center;
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+}
+
+.edit-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  color: #4a9eff;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.edit-button:hover {
+  background: #3a3a3a;
+  border-color: #4a9eff;
+  transform: translateY(-1px);
+}
+
+.edit-button:active {
+  transform: translateY(0);
+}
+
+.edit-button:focus {
+  outline: 2px solid #4a9eff;
+  outline-offset: 2px;
+}
+
+.delete-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  color: #ff6b6b;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.delete-button:hover {
+  background: #3a2020;
+  border-color: #ff6b6b;
+  transform: translateY(-1px);
+}
+
+.delete-button:active {
+  transform: translateY(0);
+}
+
+.delete-button:focus {
+  outline: 2px solid #ff6b6b;
+  outline-offset: 2px;
+}
+
 @media (max-width: 768px) {
   .transaction-table {
     font-size: 0.9rem;
@@ -133,5 +208,22 @@
 
   .description-cell {
     max-width: 150px;
+  }
+
+  .actions-column {
+    width: 160px;
+  }
+
+  .actions-cell {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .edit-button,
+  .delete-button {
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    gap: 2px;
+    width: 100%;
   }
 }

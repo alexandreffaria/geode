@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 
@@ -23,48 +22,46 @@ func NewAccountHandler(ledger *services.LedgerService) *AccountHandler {
 // GetAllAccounts handles GET /api/accounts
 func (h *AccountHandler) GetAllAccounts(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 
 	accounts, err := h.ledger.GetAllAccounts()
 	if err != nil {
 		log.Printf("Error getting accounts: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		WriteError(w, http.StatusInternalServerError, "Internal server error")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(accounts)
+	WriteJSON(w, http.StatusOK, accounts)
 	log.Printf("Retrieved %d accounts", len(accounts))
 }
 
 // GetAccountByName handles GET /api/accounts/:name
 func (h *AccountHandler) GetAccountByName(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 
 	// Extract name from URL path (simple implementation)
 	name := r.URL.Path[len("/api/accounts/"):]
 	if name == "" {
-		http.Error(w, "Account name required", http.StatusBadRequest)
+		WriteError(w, http.StatusBadRequest, "Account name required")
 		return
 	}
 
 	account, err := h.ledger.GetAccountByName(name)
 	if err != nil {
 		log.Printf("Error getting account: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		WriteError(w, http.StatusInternalServerError, "Internal server error")
 		return
 	}
 
 	if account == nil {
-		http.Error(w, "Account not found", http.StatusNotFound)
+		WriteError(w, http.StatusNotFound, "Account not found")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(account)
+	WriteJSON(w, http.StatusOK, account)
 }

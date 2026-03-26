@@ -2,8 +2,48 @@ package models
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 )
+
+// Date is a custom type that wraps time.Time to handle date-only format (YYYY-MM-DD)
+type Date struct {
+	time.Time
+}
+
+// UnmarshalJSON parses a date string in YYYY-MM-DD format
+func (d *Date) UnmarshalJSON(b []byte) error {
+	// Remove quotes from JSON string
+	s := strings.Trim(string(b), "\"")
+	
+	// Handle empty string or null
+	if s == "" || s == "null" {
+		d.Time = time.Time{}
+		return nil
+	}
+	
+	// Parse the date in YYYY-MM-DD format
+	t, err := time.Parse("2006-01-02", s)
+	if err != nil {
+		return fmt.Errorf("invalid date format, expected YYYY-MM-DD: %w", err)
+	}
+	
+	// Set to midnight UTC
+	d.Time = t.UTC()
+	return nil
+}
+
+// MarshalJSON outputs the date in YYYY-MM-DD format
+func (d Date) MarshalJSON() ([]byte, error) {
+	// Handle zero time
+	if d.Time.IsZero() {
+		return []byte("null"), nil
+	}
+	
+	// Format as YYYY-MM-DD and wrap in quotes
+	return []byte(fmt.Sprintf("\"%s\"", d.Time.Format("2006-01-02"))), nil
+}
 
 // TransactionType represents the type of transaction
 type TransactionType string
@@ -17,7 +57,7 @@ const (
 // Transaction represents a financial transaction
 type Transaction struct {
 	ID          string          `json:"id"`
-	Date        time.Time       `json:"date"`
+	Date        Date            `json:"date"`
 	Type        TransactionType `json:"type"`
 	Amount      float64         `json:"amount"`
 	Description string          `json:"description"`

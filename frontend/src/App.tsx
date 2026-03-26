@@ -1,39 +1,82 @@
-import { useState, useEffect } from "react";
-import type { Transaction, Account } from "./types";
+import { useState } from "react";
+import type { Transaction } from "./types";
 import { apiService } from "./services/api";
-import { TransactionForm } from "./components/TransactionForm";
+import { useTransactions } from "./hooks/useTransactions";
+import { useAccounts } from "./hooks/useAccounts";
+import { TransactionModal } from "./components/TransactionModal";
 import { TransactionList } from "./components/TransactionList";
 import { AccountList } from "./components/AccountList";
 import "./App.css";
 
 function App() {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Use custom hooks for data fetching
+  const {
+    transactions,
+    loading: transactionsLoading,
+    error: transactionsError,
+    refetch: refetchTransactions,
+  } = useTransactions();
 
-  const fetchData = async () => {
-    try {
-      setError(null);
-      const [transactionsData, accountsData] = await Promise.all([
-        apiService.getTransactions(),
-        apiService.getAccounts(),
-      ]);
-      setTransactions(transactionsData.reverse()); // Show newest first
-      setAccounts(accountsData);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch data");
-    } finally {
-      setLoading(false);
-    }
+  const {
+    accounts,
+    loading: accountsLoading,
+    error: accountsError,
+    refetch: refetchAccounts,
+  } = useAccounts();
+
+  // Combine loading and error states
+  const loading = transactionsLoading || accountsLoading;
+  const error = transactionsError || accountsError;
+
+  // Modal state management
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean;
+    mode: "add" | "edit";
+    transaction: Transaction | null;
+  }>({
+    isOpen: false,
+    mode: "add",
+    transaction: null,
+  });
+
+  // Refetch both transactions and accounts
+  const refetchData = async () => {
+    await Promise.all([refetchTransactions(), refetchAccounts()]);
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  // Modal handler functions
+  const openAddModal = () => {
+    setModalState({ isOpen: true, mode: "add", transaction: null });
+  };
 
-  const handleTransactionAdded = () => {
-    fetchData(); // Refresh all data after adding a transaction
+  const openEditModal = (transaction: Transaction) => {
+    setModalState({ isOpen: true, mode: "edit", transaction });
+  };
+
+  const closeModal = () => {
+    setModalState({ isOpen: false, mode: "add", transaction: null });
+  };
+
+  const handleModalSuccess = () => {
+    refetchData(); // Refresh all data after successful add/edit
+    closeModal();
+  };
+
+  const handleDeleteTransaction = async (transaction: Transaction) => {
+    const confirmMessage = `Are you sure you want to delete this transaction? This will reverse its effects on account balances.`;
+
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      await apiService.deleteTransaction(transaction.id);
+      // Refresh data after successful deletion
+      await refetchData();
+    } catch (err) {
+      // Error handling is done by the hooks
+      console.error("Failed to delete transaction:", err);
+    }
   };
 
   if (loading) {
@@ -56,7 +99,7 @@ function App() {
       {error && (
         <div className="global-error">
           <strong>Error:</strong> {error}
-          <button onClick={fetchData} className="retry-button">
+          <button onClick={refetchData} className="retry-button">
             Retry
           </button>
         </div>
@@ -65,15 +108,31 @@ function App() {
       <main className="app-main">
         <div className="left-column">
           <AccountList accounts={accounts} />
-          <TransactionForm
-            accounts={accounts}
-            onTransactionAdded={handleTransactionAdded}
-          />
+          <button className="add-transaction-button" onClick={openAddModal}>
+            <span className="button-icon">+</span>
+            Add Transaction
+          </button>
         </div>
         <div className="right-column">
-          <TransactionList transactions={transactions} />
+          <TransactionList
+            transactions={transactions}
+            onEditTransaction={openEditModal}
+            onDeleteTransaction={handleDeleteTransaction}
+          />
         </div>
       </main>
+
+      {/* Transaction Modal */}
+      {modalState.isOpen && (
+        <TransactionModal
+          isOpen={modalState.isOpen}
+          mode={modalState.mode}
+          transaction={modalState.transaction ?? undefined}
+          accounts={accounts}
+          onClose={closeModal}
+          onSuccess={handleModalSuccess}
+        />
+      )}
     </div>
   );
 }

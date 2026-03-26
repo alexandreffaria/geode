@@ -80,6 +80,42 @@
   min-width: 0; /* Prevents grid overflow */
 }
 
+/* Add Transaction Button */
+.add-transaction-button {
+  width: 100%;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, #4a9eff 0%, #3a7ed8 100%);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.add-transaction-button:hover {
+  background: linear-gradient(135deg, #5aa9ff 0%, #4a8ee8 100%);
+  box-shadow: 0 6px 16px rgba(74, 158, 255, 0.4);
+  transform: translateY(-2px);
+}
+
+.add-transaction-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(74, 158, 255, 0.3);
+}
+
+.button-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+  font-weight: 700;
+}
+
 @media (max-width: 1200px) {
   .app-main {
     grid-template-columns: 1fr;

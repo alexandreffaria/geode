@@ -4,8 +4,8 @@ export type TransactionType = "purchase" | "earning" | "transfer";
 interface BaseTransaction {
   id: string;
   amount: number;
-  description: string;
-  timestamp: string;
+  description?: string;
+  date: string;
 }
 
 // Purchase: money leaves account, goes to category
@@ -43,27 +43,31 @@ export interface Account {
 }
 
 // Form data for creating transactions
+// Note: date field is in YYYY-MM-DD format (matches backend)
 export type TransactionFormData =
   | {
       type: "purchase";
       amount: string;
       account: string;
       category: string;
-      description: string;
+      description?: string;
+      date: string;
     }
   | {
       type: "earning";
       amount: string;
       account: string;
       category: string;
-      description: string;
+      description?: string;
+      date: string;
     }
   | {
       type: "transfer";
       amount: string;
       from_account: string;
       to_account: string;
-      description: string;
+      description?: string;
+      date: string;
     };
 
 export interface ApiError {

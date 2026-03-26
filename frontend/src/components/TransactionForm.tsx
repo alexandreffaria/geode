@@ -1,27 +1,107 @@
-import { useState, type FormEvent } from "react";
-import type { TransactionFormData, TransactionType, Account } from "../types";
+import { useState, useEffect, type FormEvent } from "react";
+import type {
+  TransactionFormData,
+  TransactionType,
+  Account,
+  Transaction,
+} from "../types";
 import { apiService } from "../services/api";
+import { DateField } from "./form-fields/DateField";
+import { AmountField } from "./form-fields/AmountField";
+import { DescriptionField } from "./form-fields/DescriptionField";
+import { AccountSelect } from "./form-fields/AccountSelect";
 import "./TransactionForm.css";
 
 interface TransactionFormProps {
   accounts: Account[];
-  onTransactionAdded: () => void;
+  mode?: "add" | "edit";
+  initialTransaction?: Transaction;
+  onSuccess?: () => void;
+  onCancel?: () => void;
+  // Legacy props for backward compatibility
+  onTransactionAdded?: () => void;
 }
 
-export function TransactionForm({
-  accounts,
-  onTransactionAdded,
-}: TransactionFormProps) {
-  const [formData, setFormData] = useState<TransactionFormData>({
+// Helper function to get default date for date input
+const getDefaultDate = (): string => {
+  const now = new Date();
+  // Format for date: YYYY-MM-DD
+  return now.toISOString().slice(0, 10);
+};
+
+// Helper function to get date from transaction (already in YYYY-MM-DD format)
+const getEditDate = (transaction: Transaction): string => {
+  return transaction.date;
+};
+
+// Helper function to convert Transaction to TransactionFormData
+const transactionToFormData = (
+  transaction: Transaction,
+): TransactionFormData => {
+  const base = {
+    amount: transaction.amount.toString(),
+    description: transaction.description || "",
+    date: getEditDate(transaction),
+  };
+
+  if (transaction.type === "transfer") {
+    return {
+      type: "transfer",
+      ...base,
+      from_account: transaction.from_account,
+      to_account: transaction.to_account,
+    };
+  } else {
+    return {
+      type: transaction.type,
+      ...base,
+      account: transaction.account,
+      category: transaction.category,
+    };
+  }
+};
+
+// Helper function to initialize form data
+const initializeFormData = (
+  mode: "add" | "edit" | undefined,
+  initialTransaction?: Transaction,
+): TransactionFormData => {
+  if (mode === "edit" && initialTransaction) {
+    return transactionToFormData(initialTransaction);
+  }
+
+  // Default for add mode (or legacy mode)
+  return {
     type: "purchase",
     amount: "",
     account: "",
     category: "",
     description: "",
-  });
+    date: getDefaultDate(),
+  };
+};
+
+export function TransactionForm({
+  accounts,
+  mode = "add",
+  initialTransaction,
+  onSuccess,
+  onCancel,
+  onTransactionAdded,
+}: TransactionFormProps) {
+  const [formData, setFormData] = useState<TransactionFormData>(() =>
+    initializeFormData(mode, initialTransaction),
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  // Update form data when initialTransaction changes (for edit mode)
+  useEffect(() => {
+    if (mode === "edit" && initialTransaction) {
+      setFormData(transactionToFormData(initialTransaction));
+    }
+  }, [mode, initialTransaction]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -30,33 +110,25 @@ export function TransactionForm({
     setLoading(true);
 
     try {
-      await apiService.addTransaction(formData);
-      setSuccess(true);
-      // Reset form based on current type
-      if (formData.type === "transfer") {
-        setFormData({
-          type: "transfer",
-          amount: "",
-          from_account: "",
-          to_account: "",
-          description: "",
-        });
-      } else {
-        setFormData({
-          type: formData.type,
-          amount: "",
-          account: "",
-          category: "",
-          description: "",
-        });
+      if (mode === "add") {
+        await apiService.addTransaction(formData);
+      } else if (mode === "edit" && initialTransaction) {
+        await apiService.updateTransaction(initialTransaction.id, formData);
       }
-      onTransactionAdded();
 
-      // Clear success message after 3 seconds
-      setTimeout(() => setSuccess(false), 3000);
+      // Call the appropriate success callback
+      if (onSuccess) {
+        onSuccess();
+      } else if (onTransactionAdded) {
+        // Legacy support: show success message and reset form
+        setSuccess(true);
+        setFormData(initializeFormData("add", undefined));
+        onTransactionAdded();
+        setTimeout(() => setSuccess(false), 3000);
+      }
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to add transaction",
+        err instanceof Error ? err.message : `Failed to ${mode} transaction`,
       );
     } finally {
       setLoading(false);
@@ -64,168 +136,146 @@ export function TransactionForm({
   };
 
   const handleTypeChange = (type: TransactionType) => {
-    // Reset form data when type changes
+    // Reset form data when type changes (only in add mode)
     if (type === "transfer") {
       setFormData({
         type: "transfer",
-        amount: "",
+        amount: formData.amount,
         from_account: "",
         to_account: "",
-        description: "",
+        description: formData.description,
+        date: formData.date,
       });
     } else {
       setFormData({
         type: type,
-        amount: "",
+        amount: formData.amount,
         account: "",
         category: "",
-        description: "",
+        description: formData.description,
+        date: formData.date,
       });
     }
   };
 
+  const submitButtonText =
+    mode === "add"
+      ? loading
+        ? "Adding..."
+        : "Add Transaction"
+      : loading
+        ? "Saving..."
+        : "Update Transaction";
+
   return (
-    <div className="transaction-form-container">
-      <h2>Add Transaction</h2>
-      <form onSubmit={handleSubmit} className="transaction-form">
-        <div className="form-group">
-          <label htmlFor="type">Type</label>
-          <select
-            id="type"
-            value={formData.type}
-            onChange={(e) =>
-              handleTypeChange(e.target.value as TransactionType)
+    <form onSubmit={handleSubmit} className="transaction-form">
+      <div className="form-group">
+        <label htmlFor="type">Type</label>
+        <select
+          id="type"
+          value={formData.type}
+          onChange={(e) => handleTypeChange(e.target.value as TransactionType)}
+          disabled={mode === "edit"}
+          required
+        >
+          <option value="purchase">Purchase</option>
+          <option value="earning">Earning</option>
+          <option value="transfer">Transfer</option>
+        </select>
+      </div>
+
+      <DateField
+        value={formData.date}
+        onChange={(date) => setFormData({ ...formData, date })}
+        disabled={loading}
+      />
+
+      <AmountField
+        value={formData.amount}
+        onChange={(amount) => setFormData({ ...formData, amount })}
+        disabled={loading}
+      />
+
+      {formData.type === "transfer" ? (
+        <>
+          <AccountSelect
+            id="from_account"
+            label="From Account"
+            value={formData.from_account}
+            onChange={(from_account) =>
+              setFormData({ ...formData, from_account })
             }
-            required
+            accounts={accounts}
+            disabled={loading}
+          />
+
+          <AccountSelect
+            id="to_account"
+            label="To Account"
+            value={formData.to_account}
+            onChange={(to_account) => setFormData({ ...formData, to_account })}
+            accounts={accounts}
+            disabled={loading}
+          />
+        </>
+      ) : (
+        <>
+          <AccountSelect
+            id="account"
+            label={formData.type === "purchase" ? "From Account" : "To Account"}
+            value={formData.account}
+            onChange={(account) => setFormData({ ...formData, account })}
+            accounts={accounts}
+            disabled={loading}
+          />
+
+          <div className="form-group">
+            <label htmlFor="category">Category</label>
+            <input
+              id="category"
+              type="text"
+              value={formData.category}
+              onChange={(e) =>
+                setFormData({ ...formData, category: e.target.value })
+              }
+              placeholder={
+                formData.type === "purchase"
+                  ? "e.g., Groceries, Coffee, Rent"
+                  : "e.g., Salary, Freelance, Gift"
+              }
+              disabled={loading}
+              required
+            />
+          </div>
+        </>
+      )}
+
+      <DescriptionField
+        value={formData.description || ""}
+        onChange={(description) => setFormData({ ...formData, description })}
+        disabled={loading}
+      />
+
+      {error && <div className="error-message">{error}</div>}
+      {success && (
+        <div className="success-message">Transaction added successfully!</div>
+      )}
+
+      <div className="form-actions">
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="cancel-button"
+            disabled={loading}
           >
-            <option value="purchase">Purchase</option>
-            <option value="earning">Earning</option>
-            <option value="transfer">Transfer</option>
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="amount">Amount</label>
-          <input
-            id="amount"
-            type="number"
-            step="0.01"
-            min="0.01"
-            value={formData.amount}
-            onChange={(e) =>
-              setFormData({ ...formData, amount: e.target.value })
-            }
-            placeholder="0.00"
-            required
-          />
-        </div>
-
-        {formData.type === "transfer" ? (
-          <>
-            <div className="form-group">
-              <label htmlFor="from_account">From Account</label>
-              <select
-                id="from_account"
-                value={formData.from_account}
-                onChange={(e) =>
-                  setFormData({ ...formData, from_account: e.target.value })
-                }
-                required
-              >
-                <option value="">Select account...</option>
-                {accounts.map((account) => (
-                  <option key={account.id} value={account.name}>
-                    {account.name} (${account.balance.toFixed(2)})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="to_account">To Account</label>
-              <select
-                id="to_account"
-                value={formData.to_account}
-                onChange={(e) =>
-                  setFormData({ ...formData, to_account: e.target.value })
-                }
-                required
-              >
-                <option value="">Select account...</option>
-                {accounts.map((account) => (
-                  <option key={account.id} value={account.name}>
-                    {account.name} (${account.balance.toFixed(2)})
-                  </option>
-                ))}
-              </select>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="form-group">
-              <label htmlFor="account">
-                {formData.type === "purchase" ? "From Account" : "To Account"}
-              </label>
-              <select
-                id="account"
-                value={formData.account}
-                onChange={(e) =>
-                  setFormData({ ...formData, account: e.target.value })
-                }
-                required
-              >
-                <option value="">Select account...</option>
-                {accounts.map((account) => (
-                  <option key={account.id} value={account.name}>
-                    {account.name} (${account.balance.toFixed(2)})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="category">Category</label>
-              <input
-                id="category"
-                type="text"
-                value={formData.category}
-                onChange={(e) =>
-                  setFormData({ ...formData, category: e.target.value })
-                }
-                placeholder={
-                  formData.type === "purchase"
-                    ? "e.g., Groceries, Coffee, Rent"
-                    : "e.g., Salary, Freelance, Gift"
-                }
-                required
-              />
-            </div>
-          </>
+            Cancel
+          </button>
         )}
-
-        <div className="form-group">
-          <label htmlFor="description">Description</label>
-          <input
-            id="description"
-            type="text"
-            value={formData.description}
-            onChange={(e) =>
-              setFormData({ ...formData, description: e.target.value })
-            }
-            placeholder="Transaction description"
-            required
-          />
-        </div>
-
-        {error && <div className="error-message">{error}</div>}
-        {success && (
-          <div className="success-message">Transaction added successfully!</div>
-        )}
-
         <button type="submit" disabled={loading} className="submit-button">
-          {loading ? "Adding..." : "Add Transaction"}
+          {submitButtonText}
         </button>
-      </form>
-    </div>
+      </div>
+    </form>
   );
 }

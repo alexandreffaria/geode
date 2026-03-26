@@ -99,6 +99,61 @@ func (s *JSONStorage) GetTransactionByID(id string) (*models.Transaction, error)
 	return nil, errors.New("transaction not found")
 }
 
+// UpdateTransaction updates an existing transaction in the JSON file
+func (s *JSONStorage) UpdateTransaction(transaction *models.Transaction) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	transactions, err := s.readTransactions()
+	if err != nil {
+		return err
+	}
+
+	// Find and update the transaction
+	found := false
+	for i, t := range transactions {
+		if t.ID == transaction.ID {
+			transactions[i] = transaction
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return errors.New("transaction not found")
+	}
+
+	return s.writeTransactions(transactions)
+}
+
+// DeleteTransaction deletes a transaction from the JSON file
+func (s *JSONStorage) DeleteTransaction(id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	transactions, err := s.readTransactions()
+	if err != nil {
+		return err
+	}
+
+	// Find and remove the transaction
+	found := false
+	for i, t := range transactions {
+		if t.ID == id {
+			// Remove transaction by slicing
+			transactions = append(transactions[:i], transactions[i+1:]...)
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return errors.New("transaction not found")
+	}
+
+	return s.writeTransactions(transactions)
+}
+
 // SaveAccount saves a new account to the JSON file
 func (s *JSONStorage) SaveAccount(account *models.Account) error {
 	s.mu.Lock()

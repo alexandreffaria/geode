@@ -31,7 +31,7 @@ func (s *LedgerService) CreateTransaction(transaction *models.Transaction) (*mod
 	// Generate ID and set timestamp if not provided
 	transaction.ID = uuid.New().String()
 	if transaction.Date.IsZero() {
-		transaction.Date = time.Now()
+		transaction.Date = models.Date{Time: time.Now()}
 	}
 
 	// Get or create affected accounts
@@ -64,38 +64,154 @@ func (s *LedgerService) CreateTransaction(transaction *models.Transaction) (*mod
 	return transaction, nil
 }
 
+// applyBalanceChange applies a balance change to an account
+// If isCredit is true, the amount is added; if false, it's subtracted
+func (s *LedgerService) applyBalanceChange(accountID string, amount float64, isCredit bool) error {
+	if accountID == "" {
+		return nil
+	}
+	
+	adjustment := amount
+	if !isCredit {
+		adjustment = -amount
+	}
+	
+	return s.adjustAccountBalance(accountID, adjustment)
+}
+
 // updateAccountBalances updates the balances of accounts affected by a transaction
 func (s *LedgerService) updateAccountBalances(transaction *models.Transaction) error {
 	switch transaction.Type {
 	case models.TransactionTypePurchase:
 		// Money leaves the account (category is just metadata, no balance tracking)
-		if transaction.Account != nil && *transaction.Account != "" {
-			if err := s.adjustAccountBalance(*transaction.Account, -transaction.Amount); err != nil {
+		if transaction.Account != nil {
+			if err := s.applyBalanceChange(*transaction.Account, transaction.Amount, false); err != nil {
 				return err
 			}
 		}
 
 	case models.TransactionTypeEarning:
 		// Money enters the account (category is just metadata, no balance tracking)
-		if transaction.Account != nil && *transaction.Account != "" {
-			if err := s.adjustAccountBalance(*transaction.Account, transaction.Amount); err != nil {
+		if transaction.Account != nil {
+			if err := s.applyBalanceChange(*transaction.Account, transaction.Amount, true); err != nil {
 				return err
 			}
 		}
 
 	case models.TransactionTypeTransfer:
 		// Money leaves from_account
-		if transaction.FromAccount != nil && *transaction.FromAccount != "" {
-			if err := s.adjustAccountBalance(*transaction.FromAccount, -transaction.Amount); err != nil {
+		if transaction.FromAccount != nil {
+			if err := s.applyBalanceChange(*transaction.FromAccount, transaction.Amount, false); err != nil {
 				return err
 			}
 		}
 		// Money enters to_account
-		if transaction.ToAccount != nil && *transaction.ToAccount != "" {
-			if err := s.adjustAccountBalance(*transaction.ToAccount, transaction.Amount); err != nil {
+		if transaction.ToAccount != nil {
+			if err := s.applyBalanceChange(*transaction.ToAccount, transaction.Amount, true); err != nil {
 				return err
 			}
 		}
+	}
+
+	return nil
+}
+
+// reverseAccountBalances reverses the effect of a transaction on account balances
+func (s *LedgerService) reverseAccountBalances(transaction *models.Transaction) error {
+	switch transaction.Type {
+	case models.TransactionTypePurchase:
+		// Reverse: add money back to account
+		if transaction.Account != nil {
+			if err := s.applyBalanceChange(*transaction.Account, transaction.Amount, true); err != nil {
+				return err
+			}
+		}
+
+	case models.TransactionTypeEarning:
+		// Reverse: remove money from account
+		if transaction.Account != nil {
+			if err := s.applyBalanceChange(*transaction.Account, transaction.Amount, false); err != nil {
+				return err
+			}
+		}
+
+	case models.TransactionTypeTransfer:
+		// Reverse: add back to from_account, remove from to_account
+		if transaction.FromAccount != nil {
+			if err := s.applyBalanceChange(*transaction.FromAccount, transaction.Amount, true); err != nil {
+				return err
+			}
+		}
+		if transaction.ToAccount != nil {
+			if err := s.applyBalanceChange(*transaction.ToAccount, transaction.Amount, false); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+// UpdateTransaction updates an existing transaction
+func (s *LedgerService) UpdateTransaction(updated *models.Transaction) (*models.Transaction, error) {
+	// Validate the updated transaction
+	if err := updated.Validate(); err != nil {
+		return nil, err
+	}
+
+	// Get the original transaction
+	original, err := s.storage.GetTransactionByID(updated.ID)
+	if err != nil {
+		return nil, err
+	}
+	if original == nil {
+		return nil, errors.New("transaction not found")
+	}
+
+	// Reverse the original transaction's effect on account balances
+	if err := s.reverseAccountBalances(original); err != nil {
+		return nil, err
+	}
+
+	// Apply the updated transaction's effect on account balances
+	if err := s.updateAccountBalances(updated); err != nil {
+		// If this fails, try to restore original state
+		s.updateAccountBalances(original)
+		return nil, err
+	}
+
+	// Update the transaction in storage
+	if err := s.storage.UpdateTransaction(updated); err != nil {
+		// Rollback balance changes
+		s.reverseAccountBalances(updated)
+		s.updateAccountBalances(original)
+		return nil, err
+	}
+
+	return updated, nil
+}
+
+// DeleteTransaction deletes a transaction and reverses its effects on account balances
+func (s *LedgerService) DeleteTransaction(id string) error {
+	// Get the transaction to delete
+	transaction, err := s.storage.GetTransactionByID(id)
+	if err != nil {
+		return err
+	}
+	if transaction == nil {
+		return errors.New("transaction not found")
+	}
+
+	// Reverse the transaction's effect on account balances
+	if err := s.reverseAccountBalances(transaction); err != nil {
+		return err
+	}
+
+	// Delete the transaction from storage
+	if err := s.storage.DeleteTransaction(id); err != nil {
+		// If deletion fails, try to restore the account balances
+		s.updateAccountBalances(transaction)
+		return err
 	}
 
 	return nil
