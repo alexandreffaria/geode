@@ -10,7 +10,8 @@ interface AccountSelectProps {
 }
 
 /**
- * Reusable account selection dropdown component
+ * Reusable account selection dropdown component.
+ * Filters out archived accounts and uses account.name as the key/value.
  */
 export function AccountSelect({
   id,
@@ -20,6 +21,9 @@ export function AccountSelect({
   accounts,
   disabled,
 }: AccountSelectProps) {
+  // Only show non-archived accounts in the dropdown
+  const activeAccounts = accounts.filter((a) => !a.archived);
+
   return (
     <div className="form-group">
       <label htmlFor={id}>{label}</label>
@@ -31,9 +35,9 @@ export function AccountSelect({
         required
       >
         <option value="">Select account...</option>
-        {accounts.map((account) => (
-          <option key={account.id} value={account.name}>
-            {account.name} (${account.balance.toFixed(2)})
+        {activeAccounts.map((account) => (
+          <option key={account.name} value={account.name}>
+            {account.name} ({account.currency} {account.balance.toFixed(2)})
           </option>
         ))}
       </select>

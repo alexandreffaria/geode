@@ -1,0 +1,429 @@
+/* ============================================================
+   Account Management Modal
+   Extends the shared modal-overlay / modal-container / modal-header
+   classes defined in TransactionModal.css.
+   ============================================================ */
+
+/* Wider container for account management */
+.account-management-modal {
+  max-width: 700px;
+}
+
+/* ---- Section headings ---- */
+.am-section {
+  margin-bottom: 8px;
+}
+
+.am-section-title {
+  margin: 0 0 16px 0;
+  color: var(--text-primary, #e0e0e0);
+  font-size: 1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.am-empty-state {
+  color: var(--text-secondary, #b0b0b0);
+  font-style: italic;
+  margin: 0;
+}
+
+.am-divider {
+  border: none;
+  border-top: 1px solid var(--border-color, #3a3a3a);
+  margin: 24px 0;
+}
+
+/* ---- Error banner ---- */
+.am-error {
+  background: rgba(255, 107, 107, 0.12);
+  border: 1px solid var(--accent-red, #ff6b6b);
+  color: var(--accent-red, #ff6b6b);
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+}
+
+/* ============================================================
+   Account list
+   ============================================================ */
+.am-account-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ---- Account item (wrapper li) ---- */
+.account-item {
+  background: var(--bg-tertiary, #2a2a2a);
+  border: 1px solid var(--border-color, #3a3a3a);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.account-item:hover {
+  border-color: var(--accent-blue, #4a9eff);
+}
+
+.account-item.archived {
+  opacity: 0.6;
+}
+
+/* ---- Normal row ---- */
+.account-item-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+}
+
+/* ---- Avatar ---- */
+.account-avatar {
+  flex-shrink: 0;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.account-avatar--gradient {
+  border-radius: 50%;
+}
+
+/* ---- Info block ---- */
+.account-item-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.account-item-name {
+  color: var(--text-primary, #e0e0e0);
+  font-weight: 600;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.account-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.currency-badge {
+  background: var(--bg-secondary, #1e1e1e);
+  border: 1px solid var(--border-color, #3a3a3a);
+  color: var(--text-secondary, #b0b0b0);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.account-item-balance {
+  font-family: "Courier New", monospace;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.account-item-balance.positive {
+  color: var(--accent-green, #6bff6b);
+}
+
+.account-item-balance.negative {
+  color: var(--accent-red, #ff6b6b);
+}
+
+.archived-badge {
+  background: rgba(176, 176, 176, 0.15);
+  border: 1px solid var(--text-secondary, #b0b0b0);
+  color: var(--text-secondary, #b0b0b0);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ---- Action buttons ---- */
+.account-item-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.icon-btn {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 6px 8px;
+  font-size: 1rem;
+  line-height: 1;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.icon-btn:focus {
+  outline: 2px solid var(--accent-blue, #4a9eff);
+  outline-offset: 2px;
+}
+
+.icon-btn--edit:hover {
+  background: rgba(74, 158, 255, 0.12);
+  border-color: var(--accent-blue, #4a9eff);
+}
+
+.icon-btn--delete:hover {
+  background: rgba(255, 107, 107, 0.12);
+  border-color: var(--accent-red, #ff6b6b);
+}
+
+.icon-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ============================================================
+   Inline edit form
+   ============================================================ */
+.edit-form {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.edit-form-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.edit-form-label {
+  color: var(--text-secondary, #b0b0b0);
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+.edit-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.edit-form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+/* ============================================================
+   Add account form
+   ============================================================ */
+.add-account-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.add-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.add-form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+/* ============================================================
+   Shared form-group styles (scoped to this modal)
+   ============================================================ */
+.account-management-modal .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.account-management-modal .form-group label {
+  color: var(--text-secondary, #b0b0b0);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.account-management-modal .form-group input[type="text"],
+.account-management-modal .form-group input[type="number"],
+.account-management-modal .form-group select {
+  background: var(--bg-primary, #121212);
+  border: 1px solid var(--border-color, #3a3a3a);
+  border-radius: 6px;
+  color: var(--text-primary, #e0e0e0);
+  font-size: 0.9rem;
+  padding: 8px 10px;
+  transition: border-color 0.2s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.account-management-modal .form-group input[type="text"]:focus,
+.account-management-modal .form-group input[type="number"]:focus,
+.account-management-modal .form-group select:focus {
+  border-color: var(--accent-blue, #4a9eff);
+  outline: none;
+}
+
+.account-management-modal .form-group input:disabled,
+.account-management-modal .form-group select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---- Color picker ---- */
+.form-group--color .color-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.form-group--color input[type="color"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 40px;
+  height: 36px;
+  border: 1px solid var(--border-color, #3a3a3a);
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+  padding: 2px;
+  flex-shrink: 0;
+}
+
+.form-group--color input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.form-group--color input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 4px;
+}
+
+.form-group--color input[type="color"]:focus {
+  outline: 2px solid var(--accent-blue, #4a9eff);
+  outline-offset: 2px;
+}
+
+.color-hex {
+  color: var(--text-secondary, #b0b0b0);
+  font-family: "Courier New", monospace;
+  font-size: 0.8rem;
+}
+
+/* ---- Checkbox ---- */
+.form-group--checkbox label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--text-primary, #e0e0e0) !important;
+  font-size: 0.9rem !important;
+}
+
+.form-group--checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-blue, #4a9eff);
+  cursor: pointer;
+}
+
+/* ---- Required / optional labels ---- */
+.required {
+  color: var(--accent-red, #ff6b6b);
+}
+
+.optional {
+  color: var(--text-secondary, #b0b0b0);
+  font-weight: 400;
+  font-size: 0.8em;
+}
+
+/* ---- Gradient preview strip ---- */
+.gradient-preview {
+  height: 8px;
+  border-radius: 4px;
+  width: 100%;
+}
+
+/* ============================================================
+   Shared button styles (scoped to this modal)
+   ============================================================ */
+.btn {
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 9px 18px;
+  transition:
+    background 0.2s,
+    opacity 0.2s;
+}
+
+.btn:focus {
+  outline: 2px solid var(--accent-blue, #4a9eff);
+  outline-offset: 2px;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn--primary {
+  background: var(--accent-blue, #4a9eff);
+  color: #fff;
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: #3a8eef;
+}
+
+.btn--secondary {
+  background: var(--bg-tertiary, #2a2a2a);
+  color: var(--text-primary, #e0e0e0);
+  border: 1px solid var(--border-color, #3a3a3a);
+}
+
+.btn--secondary:hover:not(:disabled) {
+  background: #333;
+}
+
+/* ============================================================
+   Responsive
+   ============================================================ */
+@media (max-width: 600px) {
+  .edit-form-grid,
+  .add-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .account-item-row {
+    gap: 10px;
+    padding: 10px 12px;
+  }
+}

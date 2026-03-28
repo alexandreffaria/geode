@@ -4,12 +4,14 @@ import type {
   TransactionType,
   Account,
   Transaction,
+  PaymentSchedule,
 } from "../types";
 import { apiService } from "../services/api";
 import { DateField } from "./form-fields/DateField";
 import { AmountField } from "./form-fields/AmountField";
 import { DescriptionField } from "./form-fields/DescriptionField";
 import { AccountSelect } from "./form-fields/AccountSelect";
+import { PaymentScheduleSelector } from "./form-fields/PaymentScheduleSelector";
 import "./TransactionForm.css";
 
 interface TransactionFormProps {
@@ -42,6 +44,7 @@ const transactionToFormData = (
     amount: transaction.amount.toString(),
     description: transaction.description || "",
     date: getEditDate(transaction),
+    paymentSchedule: { mode: "none" } as PaymentSchedule,
   };
 
   if (transaction.type === "transfer") {
@@ -78,6 +81,7 @@ const initializeFormData = (
     category: "",
     description: "",
     date: getDefaultDate(),
+    paymentSchedule: { mode: "none" },
   };
 };
 
@@ -136,26 +140,33 @@ export function TransactionForm({
   };
 
   const handleTypeChange = (type: TransactionType) => {
+    const { amount, description, date, paymentSchedule } = formData;
     // Reset form data when type changes (only in add mode)
     if (type === "transfer") {
       setFormData({
         type: "transfer",
-        amount: formData.amount,
+        amount,
         from_account: "",
         to_account: "",
-        description: formData.description,
-        date: formData.date,
+        description,
+        date,
+        paymentSchedule,
       });
     } else {
       setFormData({
         type: type,
-        amount: formData.amount,
+        amount,
         account: "",
         category: "",
-        description: formData.description,
-        date: formData.date,
+        description,
+        date,
+        paymentSchedule,
       });
     }
+  };
+
+  const handleScheduleChange = (schedule: PaymentSchedule) => {
+    setFormData((prev) => ({ ...prev, paymentSchedule: schedule }));
   };
 
   const submitButtonText =
@@ -255,6 +266,14 @@ export function TransactionForm({
         onChange={(description) => setFormData({ ...formData, description })}
         disabled={loading}
       />
+
+      {mode === "add" && (
+        <PaymentScheduleSelector
+          value={formData.paymentSchedule}
+          onChange={handleScheduleChange}
+          disabled={loading}
+        />
+      )}
 
       {error && <div className="error-message">{error}</div>}
       {success && (

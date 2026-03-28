@@ -16,4 +16,5 @@ type Storage interface {
 	GetAllAccounts() ([]*models.Account, error)
 	GetAccountByName(name string) (*models.Account, error)
 	UpdateAccount(account *models.Account) error
+	DeleteAccount(name string) error
 }

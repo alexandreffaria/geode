@@ -56,6 +56,9 @@
   border-radius: 6px;
   padding: 16px;
   transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .account-card:hover {
@@ -64,15 +67,54 @@
   box-shadow: 0 4px 12px rgba(74, 158, 255, 0.2);
 }
 
+.account-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.account-card-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  object-fit: cover;
+}
+
+.account-card-avatar--gradient {
+  border-radius: 50%;
+}
+
+.account-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
 .account-name {
-  color: #b0b0b0;
+  color: #e0e0e0;
   font-size: 0.9rem;
-  margin-bottom: 8px;
-  font-weight: 500;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.account-currency-badge {
+  background: #1e1e1e;
+  border: 1px solid #3a3a3a;
+  color: #b0b0b0;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  align-self: flex-start;
 }
 
 .account-balance {
-  font-size: 1.4rem;
+  font-size: 1.3rem;
   font-weight: 700;
   font-family: "Courier New", monospace;
 }

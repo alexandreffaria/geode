@@ -69,12 +69,46 @@ type Transaction struct {
 	// For transfer transactions only
 	FromAccount *string `json:"from_account,omitempty"`
 	ToAccount   *string `json:"to_account,omitempty"`
+
+	// Installment support
+	InstallmentTotal   *int    `json:"installment_total,omitempty"`   // total number of installments (e.g. 12)
+	InstallmentCurrent *int    `json:"installment_current,omitempty"` // which installment this is (1-based)
+	InstallmentGroupID *string `json:"installment_group_id,omitempty"` // UUID linking all installments together
+
+	// Recurrence support
+	RecurrenceMonths  *int    `json:"recurrence_months,omitempty"`  // repeat every N months
+	RecurrenceGroupID *string `json:"recurrence_group_id,omitempty"` // UUID linking recurrence instances
 }
 
 // Validate checks if the transaction is valid
 func (t *Transaction) Validate() error {
 	if t.Amount <= 0 {
 		return errors.New("amount must be greater than 0")
+	}
+
+	// Installment validation
+	if t.InstallmentTotal != nil {
+		if *t.InstallmentTotal < 2 {
+			return errors.New("installment_total must be >= 2")
+		}
+		if t.InstallmentCurrent != nil {
+			if *t.InstallmentCurrent < 1 {
+				return errors.New("installment_current must be >= 1")
+			}
+			if *t.InstallmentCurrent > *t.InstallmentTotal {
+				return errors.New("installment_current must be <= installment_total")
+			}
+		}
+	}
+
+	// Recurrence validation
+	if t.RecurrenceMonths != nil && *t.RecurrenceMonths < 1 {
+		return errors.New("recurrence_months must be >= 1")
+	}
+
+	// Installments and recurrence are mutually exclusive
+	if t.InstallmentTotal != nil && t.RecurrenceMonths != nil {
+		return errors.New("installment and recurrence fields are mutually exclusive")
 	}
 
 	switch t.Type {

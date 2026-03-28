@@ -4,6 +4,7 @@ import { apiService } from "./services/api";
 import { useTransactions } from "./hooks/useTransactions";
 import { useAccounts } from "./hooks/useAccounts";
 import { TransactionModal } from "./components/TransactionModal";
+import { AccountManagementModal } from "./components/AccountManagementModal";
 import { TransactionList } from "./components/TransactionList";
 import { AccountList } from "./components/AccountList";
 import "./App.css";
@@ -22,13 +23,16 @@ function App() {
     loading: accountsLoading,
     error: accountsError,
     refetch: refetchAccounts,
+    createAccount,
+    updateAccount,
+    deleteAccount,
   } = useAccounts();
 
   // Combine loading and error states
   const loading = transactionsLoading || accountsLoading;
   const error = transactionsError || accountsError;
 
-  // Modal state management
+  // Transaction modal state
   const [modalState, setModalState] = useState<{
     isOpen: boolean;
     mode: "add" | "edit";
@@ -39,12 +43,15 @@ function App() {
     transaction: null,
   });
 
+  // Account management modal state
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+
   // Refetch both transactions and accounts
   const refetchData = async () => {
     await Promise.all([refetchTransactions(), refetchAccounts()]);
   };
 
-  // Modal handler functions
+  // Transaction modal handler functions
   const openAddModal = () => {
     setModalState({ isOpen: true, mode: "add", transaction: null });
   };
@@ -58,7 +65,7 @@ function App() {
   };
 
   const handleModalSuccess = () => {
-    refetchData(); // Refresh all data after successful add/edit
+    refetchData();
     closeModal();
   };
 
@@ -71,10 +78,8 @@ function App() {
 
     try {
       await apiService.deleteTransaction(transaction.id);
-      // Refresh data after successful deletion
       await refetchData();
     } catch (err) {
-      // Error handling is done by the hooks
       console.error("Failed to delete transaction:", err);
     }
   };
@@ -90,10 +95,22 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>💰 Personal Finance Manager</h1>
-        <p className="subtitle">
-          Track your transactions and manage your accounts
-        </p>
+        <div className="app-header-left">
+          <h1>💰 Personal Finance Manager</h1>
+          <p className="subtitle">
+            Track your transactions and manage your accounts
+          </p>
+        </div>
+        <nav className="app-header-nav">
+          <button
+            className="nav-button nav-button--accounts"
+            onClick={() => setIsAccountModalOpen(true)}
+            type="button"
+            aria-label="Manage accounts"
+          >
+            ⚙️ Accounts
+          </button>
+        </nav>
       </header>
 
       {error && (
@@ -131,6 +148,18 @@ function App() {
           accounts={accounts}
           onClose={closeModal}
           onSuccess={handleModalSuccess}
+        />
+      )}
+
+      {/* Account Management Modal */}
+      {isAccountModalOpen && (
+        <AccountManagementModal
+          isOpen={isAccountModalOpen}
+          accounts={accounts}
+          onClose={() => setIsAccountModalOpen(false)}
+          onCreateAccount={createAccount}
+          onUpdateAccount={updateAccount}
+          onDeleteAccount={deleteAccount}
         />
       )}
     </div>

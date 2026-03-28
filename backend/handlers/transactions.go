@@ -35,15 +35,20 @@ func (h *TransactionHandler) CreateTransaction(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	createdTransaction, err := h.ledger.CreateTransaction(&transaction)
+	transactions, err := h.ledger.CreateTransaction(&transaction)
 	if err != nil {
 		log.Printf("Error creating transaction: %v", err)
 		WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	WriteJSON(w, http.StatusCreated, createdTransaction)
-	log.Printf("Transaction created: %s (type: %s, amount: %.2f)", createdTransaction.ID, createdTransaction.Type, createdTransaction.Amount)
+	if len(transactions) == 1 {
+		WriteJSON(w, http.StatusCreated, transactions[0])
+		log.Printf("Transaction created: %s (type: %s, amount: %.2f)", transactions[0].ID, transactions[0].Type, transactions[0].Amount)
+	} else {
+		WriteJSON(w, http.StatusCreated, transactions)
+		log.Printf("%d installment transactions created (group: %s, type: %s)", len(transactions), *transactions[0].InstallmentGroupID, transactions[0].Type)
+	}
 }
 
 // GetAllTransactions handles GET /api/transactions

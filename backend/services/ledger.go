@@ -21,17 +21,89 @@ func NewLedgerService(storage storage.Storage) *LedgerService {
 	}
 }
 
-// CreateTransaction creates a new transaction and updates account balances
-func (s *LedgerService) CreateTransaction(transaction *models.Transaction) (*models.Transaction, error) {
+// CreateTransaction creates a new transaction (or multiple for installments) and updates account balances.
+// Returns a slice of created transactions — one for regular/recurring, N for installments.
+func (s *LedgerService) CreateTransaction(transaction *models.Transaction) ([]*models.Transaction, error) {
 	// Validate transaction
 	if err := transaction.Validate(); err != nil {
 		return nil, err
 	}
 
-	// Generate ID and set timestamp if not provided
-	transaction.ID = uuid.New().String()
+	// Set default date if not provided
 	if transaction.Date.IsZero() {
 		transaction.Date = models.Date{Time: time.Now()}
+	}
+
+	// Case A: Installments
+	if transaction.InstallmentTotal != nil && *transaction.InstallmentTotal >= 2 {
+		return s.createInstallments(transaction)
+	}
+
+	// Case B: Recurring — attach a group ID and save as a single transaction
+	if transaction.RecurrenceMonths != nil {
+		groupID := uuid.New().String()
+		transaction.RecurrenceGroupID = &groupID
+	}
+
+	// Default: single transaction
+	saved, err := s.saveSingleTransaction(transaction)
+	if err != nil {
+		return nil, err
+	}
+	return []*models.Transaction{saved}, nil
+}
+
+// createInstallments generates N installment records from a template transaction.
+func (s *LedgerService) createInstallments(template *models.Transaction) ([]*models.Transaction, error) {
+	n := *template.InstallmentTotal
+	groupID := uuid.New().String()
+	installmentAmount := template.Amount / float64(n)
+
+	created := make([]*models.Transaction, 0, n)
+
+	for i := 1; i <= n; i++ {
+		current := i // capture loop variable
+
+		// Compute date: original date + (i-1) months
+		installmentDate := models.Date{
+			Time: template.Date.Time.AddDate(0, i-1, 0),
+		}
+
+		t := &models.Transaction{
+			// Identity
+			ID:   uuid.New().String(),
+			Date: installmentDate,
+
+			// Core fields copied from template
+			Type:        template.Type,
+			Amount:      installmentAmount,
+			Description: template.Description,
+			Account:     template.Account,
+			Category:    template.Category,
+			FromAccount: template.FromAccount,
+			ToAccount:   template.ToAccount,
+
+			// Installment metadata
+			InstallmentTotal:   &n,
+			InstallmentCurrent: &current,
+			InstallmentGroupID: &groupID,
+		}
+
+		saved, err := s.saveSingleTransaction(t)
+		if err != nil {
+			return nil, err
+		}
+		created = append(created, saved)
+	}
+
+	return created, nil
+}
+
+// saveSingleTransaction ensures accounts exist, applies balance changes, and persists the transaction.
+func (s *LedgerService) saveSingleTransaction(transaction *models.Transaction) (*models.Transaction, error) {
+	// Generate ID if not already set
+	if transaction.ID == "" {
+		transaction.ID = uuid.New().String()
 	}
 
 	// Get or create affected accounts
@@ -250,4 +322,117 @@ func (s *LedgerService) GetAllAccounts() ([]*models.Account, error) {
 // GetAccountByName retrieves an account by name
 func (s *LedgerService) GetAccountByName(name string) (*models.Account, error) {
 	return s.storage.GetAccountByName(name)
+}
+
+// CreateAccount creates a new account with the given parameters.
+// If gradientStart or gradientEnd are empty, random ones are generated via NewAccount.
+func (s *LedgerService) CreateAccount(name string, initialBalance float64, currency, imageURL, gradientStart, gradientEnd string) (*models.Account, error) {
+	if name == "" {
+		return nil, errors.New("account name is required")
+	}
+
+	// Check for duplicate
+	existing, err := s.storage.GetAccountByName(name)
+	if err != nil {
+		return nil, err
+	}
+	if existing != nil {
+		return nil, errors.New("account already exists")
+	}
+
+	account := models.NewAccount(name, initialBalance)
+
+	if currency != "" {
+		account.Currency = currency
+	}
+	if imageURL != "" {
+		account.ImageURL = imageURL
+	}
+	if gradientStart != "" {
+		account.GradientStart = gradientStart
+	}
+	if gradientEnd != "" {
+		account.GradientEnd = gradientEnd
+	}
+
+	if err := s.storage.SaveAccount(account); err != nil {
+		return nil, err
+	}
+	return account, nil
+}
+
+// UpdateAccount updates an existing account's metadata fields.
+// When initialBalance changes, Balance is adjusted by the delta.
+func (s *LedgerService) UpdateAccount(name string, req *models.AccountUpdateRequest) (*models.Account, error) {
+	account, err := s.storage.GetAccountByName(name)
+	if err != nil {
+		return nil, err
+	}
+	if account == nil {
+		return nil, errors.New("account not found")
+	}
+
+	// Handle rename: check new name is not taken
+	if req.Name != nil && *req.Name != "" && *req.Name != account.Name {
+		existing, err := s.storage.GetAccountByName(*req.Name)
+		if err != nil {
+			return nil, err
+		}
+		if existing != nil {
+			return nil, errors.New("an account with that name already exists")
+		}
+		// Delete old record, will save under new name below
+		if err := s.storage.DeleteAccount(account.Name); err != nil {
+			return nil, err
+		}
+		account.Name = *req.Name
+	}
+
+	if req.Currency != nil {
+		account.Currency = *req.Currency
+	}
+	if req.ImageURL != nil {
+		account.ImageURL = *req.ImageURL
+	}
+	if req.GradientStart != nil {
+		account.GradientStart = *req.GradientStart
+	}
+	if req.GradientEnd != nil {
+		account.GradientEnd = *req.GradientEnd
+	}
+	if req.Archived != nil {
+		account.Archived = *req.Archived
+	}
+	if req.InitialBalance != nil {
+		delta := *req.InitialBalance - account.InitialBalance
+		account.Balance += delta
+		account.InitialBalance = *req.InitialBalance
+	}
+
+	account.LastUpdated = time.Now()
+
+	// If we renamed, the old record was deleted; save as new
+	if req.Name != nil && *req.Name != "" && *req.Name != name {
+		if err := s.storage.SaveAccount(account); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := s.storage.UpdateAccount(account); err != nil {
+			return nil, err
+		}
+	}
+
+	return account, nil
+}
+
+// DeleteAccount deletes an account by name
+func (s *LedgerService) DeleteAccount(name string) error {
+	account, err := s.storage.GetAccountByName(name)
+	if err != nil {
+		return err
+	}
+	if account == nil {
+		return errors.New("account not found")
+	}
+	return s.storage.DeleteAccount(name)
 }

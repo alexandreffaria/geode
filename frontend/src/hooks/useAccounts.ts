@@ -1,5 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
-import type { Account } from "../types";
+import type {
+  Account,
+  CreateAccountRequest,
+  UpdateAccountRequest,
+} from "../types";
 import { apiService } from "../services/api";
 
 interface UseAccountsResult {
@@ -7,11 +11,14 @@ interface UseAccountsResult {
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
+  createAccount: (data: CreateAccountRequest) => Promise<void>;
+  updateAccount: (name: string, data: UpdateAccountRequest) => Promise<void>;
+  deleteAccount: (name: string) => Promise<void>;
 }
 
 /**
  * Custom hook for fetching and managing accounts
- * Handles loading states, errors, and provides a refetch function
+ * Handles loading states, errors, and provides CRUD operations
  */
 export function useAccounts(): UseAccountsResult {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -35,5 +42,37 @@ export function useAccounts(): UseAccountsResult {
     refetch();
   }, [refetch]);
 
-  return { accounts, loading, error, refetch };
+  const createAccount = useCallback(
+    async (data: CreateAccountRequest): Promise<void> => {
+      await apiService.createAccount(data);
+      await refetch();
+    },
+    [refetch],
+  );
+
+  const updateAccount = useCallback(
+    async (name: string, data: UpdateAccountRequest): Promise<void> => {
+      await apiService.updateAccount(name, data);
+      await refetch();
+    },
+    [refetch],
+  );
+
+  const deleteAccount = useCallback(
+    async (name: string): Promise<void> => {
+      await apiService.deleteAccount(name);
+      await refetch();
+    },
+    [refetch],
+  );
+
+  return {
+    accounts,
+    loading,
+    error,
+    refetch,
+    createAccount,
+    updateAccount,
+    deleteAccount,
+  };
 }

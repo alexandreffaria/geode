@@ -5,25 +5,74 @@
 }
 
 .app-header {
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
   margin-bottom: 40px;
-  padding: 30px 20px;
+  padding: 20px 28px;
   background: linear-gradient(135deg, #1e1e1e 0%, #2a2a2a 100%);
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
+.app-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .app-header h1 {
-  margin: 0 0 10px 0;
+  margin: 0;
   color: #e0e0e0;
-  font-size: 2.5rem;
+  font-size: 2rem;
   font-weight: 700;
 }
 
 .subtitle {
   margin: 0;
   color: #888;
-  font-size: 1.1rem;
+  font-size: 1rem;
+}
+
+.app-header-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.nav-button {
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 10px 18px;
+  transition:
+    background 0.2s,
+    transform 0.15s,
+    box-shadow 0.2s;
+  white-space: nowrap;
+}
+
+.nav-button:focus {
+  outline: 2px solid #4a9eff;
+  outline-offset: 2px;
+}
+
+.nav-button--accounts {
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  color: #e0e0e0;
+}
+
+.nav-button--accounts:hover {
+  background: #333;
+  border-color: #4a9eff;
+  color: #4a9eff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(74, 158, 255, 0.2);
 }
 
 .loading {

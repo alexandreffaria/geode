@@ -228,6 +228,32 @@ func (s *JSONStorage) UpdateAccount(account *models.Account) error {
 	return s.writeAccounts(accounts)
 }
 
+// DeleteAccount removes an account by name from the JSON file
+func (s *JSONStorage) DeleteAccount(name string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	accounts, err := s.readAccounts()
+	if err != nil {
+		return err
+	}
+
+	found := false
+	for i, a := range accounts {
+		if a.Name == name {
+			accounts = append(accounts[:i], accounts[i+1:]...)
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return errors.New("account not found")
+	}
+
+	return s.writeAccounts(accounts)
+}
+
 // readTransactions reads transactions from the JSON file
 func (s *JSONStorage) readTransactions() ([]*models.Transaction, error) {
 	data, err := os.ReadFile(s.transactionsFile)

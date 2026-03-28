@@ -3,6 +3,8 @@ import type {
   Account,
   TransactionFormData,
   ApiError,
+  CreateAccountRequest,
+  UpdateAccountRequest,
 } from "../types";
 
 const API_BASE_URL = "/api";
@@ -20,6 +22,13 @@ function buildTransactionPayload(
     description: data.description || undefined,
     date: data.date, // Send date as YYYY-MM-DD format
   };
+
+  // Add payment schedule fields
+  if (data.paymentSchedule.mode === "installment") {
+    payload.installment_total = data.paymentSchedule.months;
+  } else if (data.paymentSchedule.mode === "recurring") {
+    payload.recurrence_months = data.paymentSchedule.every_months;
+  }
 
   // Add type-specific fields
   if (data.type === "transfer") {
@@ -50,7 +59,9 @@ class ApiService {
     return this.handleResponse<Transaction[]>(response);
   }
 
-  async addTransaction(data: TransactionFormData): Promise<Transaction> {
+  async addTransaction(
+    data: TransactionFormData,
+  ): Promise<Transaction | Transaction[]> {
     const payload = buildTransactionPayload(data);
 
     const response = await fetch(`${API_BASE_URL}/transactions`, {
@@ -60,7 +71,7 @@ class ApiService {
       },
       body: JSON.stringify(payload),
     });
-    return this.handleResponse<Transaction>(response);
+    return this.handleResponse<Transaction | Transaction[]>(response);
   }
 
   async updateTransaction(
@@ -94,6 +105,49 @@ class ApiService {
   async getAccounts(): Promise<Account[]> {
     const response = await fetch(`${API_BASE_URL}/accounts`);
     return this.handleResponse<Account[]>(response);
+  }
+
+  async createAccount(data: CreateAccountRequest): Promise<Account> {
+    const response = await fetch(`${API_BASE_URL}/accounts`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse<Account>(response);
+  }
+
+  async updateAccount(
+    name: string,
+    data: UpdateAccountRequest,
+  ): Promise<Account> {
+    const response = await fetch(
+      `${API_BASE_URL}/accounts/${encodeURIComponent(name)}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      },
+    );
+    return this.handleResponse<Account>(response);
+  }
+
+  async deleteAccount(name: string): Promise<void> {
+    const response = await fetch(
+      `${API_BASE_URL}/accounts/${encodeURIComponent(name)}`,
+      {
+        method: "DELETE",
+      },
+    );
+    if (!response.ok) {
+      const error: ApiError = await response.json().catch(() => ({
+        error: `HTTP error! status: ${response.status}`,
+      }));
+      throw new Error(error.error);
+    }
   }
 }
 

@@ -85,13 +85,38 @@ func registerRoutes(mux *http.ServeMux, transactionHandler *handlers.Transaction
 
 	// Account routes
 	mux.HandleFunc("/api/accounts", middleware.Chain(
-		accountHandler.GetAllAccounts,
+		func(w http.ResponseWriter, r *http.Request) {
+			switch r.Method {
+			case http.MethodGet:
+				accountHandler.GetAllAccounts(w, r)
+			case http.MethodPost:
+				accountHandler.CreateAccount(w, r)
+			default:
+				handlers.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
+			}
+		},
 		middleware.CORS,
 		middleware.Logger,
 	))
 
 	mux.HandleFunc("/api/accounts/", middleware.Chain(
-		accountHandler.GetAccountByName,
+		func(w http.ResponseWriter, r *http.Request) {
+			name := r.URL.Path[len("/api/accounts/"):]
+			if name == "" {
+				handlers.WriteError(w, http.StatusBadRequest, "Account name required")
+				return
+			}
+			switch r.Method {
+			case http.MethodGet:
+				accountHandler.GetAccountByName(w, r)
+			case http.MethodPut:
+				accountHandler.UpdateAccount(w, r)
+			case http.MethodDelete:
+				accountHandler.DeleteAccount(w, r)
+			default:
+				handlers.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
+			}
+		},
 		middleware.CORS,
 		middleware.Logger,
 	))
@@ -106,12 +131,15 @@ func registerRoutes(mux *http.ServeMux, transactionHandler *handlers.Transaction
 // logEndpoints logs all available API endpoints
 func logEndpoints() {
 	log.Printf("API endpoints:")
-	log.Printf("  POST   /api/transactions - Create transaction")
-	log.Printf("  GET    /api/transactions - List all transactions")
-	log.Printf("  GET    /api/transactions/:id - Get transaction by ID")
-	log.Printf("  PUT    /api/transactions/:id - Update transaction")
-	log.Printf("  DELETE /api/transactions/:id - Delete transaction")
-	log.Printf("  GET    /api/accounts - List all accounts")
-	log.Printf("  GET    /api/accounts/:name - Get account by name")
-	log.Printf("  GET    /health - Health check")
+	log.Printf("  POST   /api/transactions       - Create transaction")
+	log.Printf("  GET    /api/transactions       - List all transactions")
+	log.Printf("  GET    /api/transactions/:id   - Get transaction by ID")
+	log.Printf("  PUT    /api/transactions/:id   - Update transaction")
+	log.Printf("  DELETE /api/transactions/:id   - Delete transaction")
+	log.Printf("  GET    /api/accounts           - List all accounts")
+	log.Printf("  POST   /api/accounts           - Create account")
+	log.Printf("  GET    /api/accounts/:name     - Get account by name")
+	log.Printf("  PUT    /api/accounts/:name     - Update account")
+	log.Printf("  DELETE /api/accounts/:name     - Delete account")
+	log.Printf("  GET    /health                 - Health check")
 }

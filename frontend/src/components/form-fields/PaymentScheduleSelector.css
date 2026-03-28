@@ -1,0 +1,86 @@
+/* Payment schedule section container */
+.payment-schedule-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  background: #222222;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+}
+
+/* Toggle button group — mirrors .type-selector pattern in TransactionForm.css */
+.schedule-type-selector {
+  display: flex;
+  gap: 8px;
+}
+
+.schedule-type-btn {
+  flex: 1;
+  padding: 8px 12px;
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  color: #b0b0b0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    border-color 0.2s;
+}
+
+.schedule-type-btn:hover:not(:disabled) {
+  background: #333333;
+  color: #e0e0e0;
+  border-color: #4a4a4a;
+}
+
+.schedule-type-btn.active {
+  background: #4a9eff;
+  border-color: #4a9eff;
+  color: #ffffff;
+}
+
+.schedule-type-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Inline row for the recurring "N month(s)" input */
+.recurring-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.recurring-input-row input {
+  width: 80px;
+  flex-shrink: 0;
+  padding: 10px 12px;
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  color: #e0e0e0;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.recurring-input-row input:focus {
+  outline: none;
+  border-color: #4a9eff;
+}
+
+.recurring-unit-label {
+  color: #b0b0b0;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+/* Helper / hint text shown below sub-fields */
+.field-helper-text {
+  font-size: 0.8rem;
+  color: #888888;
+  margin-top: 2px;
+}
