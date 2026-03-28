@@ -15,6 +15,7 @@ type JSONStorage struct {
 	dataDir          string
 	transactionsFile string
 	accountsFile     string
+	categoriesFile   string
 	mu               sync.RWMutex
 }
 
@@ -29,6 +30,7 @@ func NewJSONStorage(dataDir string) (*JSONStorage, error) {
 		dataDir:          dataDir,
 		transactionsFile: filepath.Join(dataDir, "transactions.json"),
 		accountsFile:     filepath.Join(dataDir, "accounts.json"),
+		categoriesFile:   filepath.Join(dataDir, "categories.json"),
 	}
 
 	// Initialize files if they don't exist
@@ -51,6 +53,13 @@ func (s *JSONStorage) initializeFiles() error {
 	// Initialize accounts file
 	if _, err := os.Stat(s.accountsFile); os.IsNotExist(err) {
 		if err := s.writeAccounts([]*models.Account{}); err != nil {
+			return err
+		}
+	}
+
+	// Initialize categories file
+	if _, err := os.Stat(s.categoriesFile); os.IsNotExist(err) {
+		if err := s.writeCategories([]*models.Category{}); err != nil {
 			return err
 		}
 	}
@@ -254,6 +263,106 @@ func (s *JSONStorage) DeleteAccount(name string) error {
 	return s.writeAccounts(accounts)
 }
 
+// SaveCategory saves a new category to the JSON file
+func (s *JSONStorage) SaveCategory(category *models.Category) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	categories, err := s.readCategories()
+	if err != nil {
+		return err
+	}
+
+	// Check if category already exists
+	for _, c := range categories {
+		if c.Name == category.Name {
+			return errors.New("category already exists")
+		}
+	}
+
+	categories = append(categories, category)
+	return s.writeCategories(categories)
+}
+
+// GetAllCategories retrieves all categories
+func (s *JSONStorage) GetAllCategories() ([]*models.Category, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return s.readCategories()
+}
+
+// GetCategoryByName retrieves a category by name
+func (s *JSONStorage) GetCategoryByName(name string) (*models.Category, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	categories, err := s.readCategories()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, c := range categories {
+		if c.Name == name {
+			return c, nil
+		}
+	}
+
+	return nil, nil // Return nil if not found (not an error)
+}
+
+// UpdateCategory updates an existing category
+func (s *JSONStorage) UpdateCategory(category *models.Category) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	categories, err := s.readCategories()
+	if err != nil {
+		return err
+	}
+
+	found := false
+	for i, c := range categories {
+		if c.Name == category.Name {
+			categories[i] = category
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return errors.New("category not found")
+	}
+
+	return s.writeCategories(categories)
+}
+
+// DeleteCategory removes a category by name from the JSON file
+func (s *JSONStorage) DeleteCategory(name string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	categories, err := s.readCategories()
+	if err != nil {
+		return err
+	}
+
+	found := false
+	for i, c := range categories {
+		if c.Name == name {
+			categories = append(categories[:i], categories[i+1:]...)
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return errors.New("category not found")
+	}
+
+	return s.writeCategories(categories)
+}
+
 // readTransactions reads transactions from the JSON file
 func (s *JSONStorage) readTransactions() ([]*models.Transaction, error) {
 	data, err := os.ReadFile(s.transactionsFile)
@@ -302,4 +411,29 @@ func (s *JSONStorage) writeAccounts(accounts []*models.Account) error {
 	}
 
 	return os.WriteFile(s.accountsFile, data, 0644)
+}
+
+// readCategories reads categories from the JSON file
+func (s *JSONStorage) readCategories() ([]*models.Category, error) {
+	data, err := os.ReadFile(s.categoriesFile)
+	if err != nil {
+		return nil, err
+	}
+
+	var categories []*models.Category
+	if err := json.Unmarshal(data, &categories); err != nil {
+		return nil, err
+	}
+
+	return categories, nil
+}
+
+// writeCategories writes categories to the JSON file
+func (s *JSONStorage) writeCategories(categories []*models.Category) error {
+	data, err := json.MarshalIndent(categories, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(s.categoriesFile, data, 0644)
 }

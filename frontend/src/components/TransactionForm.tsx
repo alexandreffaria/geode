@@ -3,6 +3,7 @@ import type {
   TransactionFormData,
   TransactionType,
   Account,
+  Category,
   Transaction,
   PaymentSchedule,
 } from "../types";
@@ -11,11 +12,13 @@ import { DateField } from "./form-fields/DateField";
 import { AmountField } from "./form-fields/AmountField";
 import { DescriptionField } from "./form-fields/DescriptionField";
 import { AccountSelect } from "./form-fields/AccountSelect";
+import { CategorySelect } from "./form-fields/CategorySelect";
 import { PaymentScheduleSelector } from "./form-fields/PaymentScheduleSelector";
 import "./TransactionForm.css";
 
 interface TransactionFormProps {
   accounts: Account[];
+  categories: Category[];
   mode?: "add" | "edit";
   initialTransaction?: Transaction;
   onSuccess?: () => void;
@@ -87,6 +90,7 @@ const initializeFormData = (
 
 export function TransactionForm({
   accounts,
+  categories,
   mode = "add",
   initialTransaction,
   onSuccess,
@@ -209,53 +213,57 @@ export function TransactionForm({
 
       {formData.type === "transfer" ? (
         <>
-          <AccountSelect
-            id="from_account"
-            label="From Account"
-            value={formData.from_account}
-            onChange={(from_account) =>
-              setFormData({ ...formData, from_account })
-            }
-            accounts={accounts}
-            disabled={loading}
-          />
+          <div className="form-group">
+            <label>From Account</label>
+            <AccountSelect
+              value={formData.from_account}
+              onChange={(from_account) =>
+                setFormData({ ...formData, from_account })
+              }
+              accounts={accounts}
+              placeholder="From account…"
+              excludeAccount={formData.to_account}
+              disabled={loading}
+            />
+          </div>
 
-          <AccountSelect
-            id="to_account"
-            label="To Account"
-            value={formData.to_account}
-            onChange={(to_account) => setFormData({ ...formData, to_account })}
-            accounts={accounts}
-            disabled={loading}
-          />
+          <div className="form-group">
+            <label>To Account</label>
+            <AccountSelect
+              value={formData.to_account}
+              onChange={(to_account) =>
+                setFormData({ ...formData, to_account })
+              }
+              accounts={accounts}
+              placeholder="To account…"
+              excludeAccount={formData.from_account}
+              disabled={loading}
+            />
+          </div>
         </>
       ) : (
         <>
-          <AccountSelect
-            id="account"
-            label={formData.type === "purchase" ? "From Account" : "To Account"}
-            value={formData.account}
-            onChange={(account) => setFormData({ ...formData, account })}
-            accounts={accounts}
-            disabled={loading}
-          />
+          <div className="form-group">
+            <label>
+              {formData.type === "purchase" ? "From Account" : "To Account"}
+            </label>
+            <AccountSelect
+              value={formData.account}
+              onChange={(account) => setFormData({ ...formData, account })}
+              accounts={accounts}
+              placeholder="Search accounts…"
+              disabled={loading}
+            />
+          </div>
 
           <div className="form-group">
             <label htmlFor="category">Category</label>
-            <input
-              id="category"
-              type="text"
+            <CategorySelect
               value={formData.category}
-              onChange={(e) =>
-                setFormData({ ...formData, category: e.target.value })
-              }
-              placeholder={
-                formData.type === "purchase"
-                  ? "e.g., Groceries, Coffee, Rent"
-                  : "e.g., Salary, Freelance, Gift"
-              }
+              onChange={(val) => setFormData({ ...formData, category: val })}
+              categories={categories}
+              transactionType={formData.type}
               disabled={loading}
-              required
             />
           </div>
         </>

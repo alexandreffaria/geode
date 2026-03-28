@@ -17,4 +17,11 @@ type Storage interface {
 	GetAccountByName(name string) (*models.Account, error)
 	UpdateAccount(account *models.Account) error
 	DeleteAccount(name string) error
+
+	// Category operations
+	SaveCategory(category *models.Category) error
+	GetAllCategories() ([]*models.Category, error)
+	GetCategoryByName(name string) (*models.Category, error)
+	UpdateCategory(category *models.Category) error
+	DeleteCategory(name string) error
 }

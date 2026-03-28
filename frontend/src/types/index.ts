@@ -127,3 +127,32 @@ export type TransactionFormData =
 export interface ApiError {
   error: string;
 }
+
+export interface Category {
+  name: string;
+  type: "income" | "expense";
+  parent_name: string | null;
+  gradient_start: string;
+  gradient_end: string;
+  image_url: string;
+  created_at: string;
+  last_updated: string;
+}
+
+export interface CreateCategoryRequest {
+  name: string;
+  type: "income" | "expense";
+  parentName?: string | null;
+  gradientStart?: string;
+  gradientEnd?: string;
+  imageURL?: string;
+}
+
+export interface UpdateCategoryRequest {
+  name?: string;
+  type?: "income" | "expense";
+  parent_name?: string; // send "" to clear parent
+  gradientStart?: string;
+  gradientEnd?: string;
+  imageURL?: string;
+}

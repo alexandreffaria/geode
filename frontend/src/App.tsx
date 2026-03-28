@@ -3,8 +3,10 @@ import type { Transaction } from "./types";
 import { apiService } from "./services/api";
 import { useTransactions } from "./hooks/useTransactions";
 import { useAccounts } from "./hooks/useAccounts";
+import { useCategories } from "./hooks/useCategories";
 import { TransactionModal } from "./components/TransactionModal";
 import { AccountManagementModal } from "./components/AccountManagementModal";
+import { CategoryManagementModal } from "./components/CategoryManagementModal";
 import { TransactionList } from "./components/TransactionList";
 import { AccountList } from "./components/AccountList";
 import "./App.css";
@@ -28,6 +30,9 @@ function App() {
     deleteAccount,
   } = useAccounts();
 
+  const { categories, createCategory, updateCategory, deleteCategory } =
+    useCategories();
+
   // Combine loading and error states
   const loading = transactionsLoading || accountsLoading;
   const error = transactionsError || accountsError;
@@ -45,6 +50,9 @@ function App() {
 
   // Account management modal state
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+
+  // Category management modal state
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
 
   // Refetch both transactions and accounts
   const refetchData = async () => {
@@ -103,6 +111,14 @@ function App() {
         </div>
         <nav className="app-header-nav">
           <button
+            className="nav-button nav-button--categories"
+            onClick={() => setIsCategoryModalOpen(true)}
+            type="button"
+            aria-label="Manage categories"
+          >
+            🏷️ Categories
+          </button>
+          <button
             className="nav-button nav-button--accounts"
             onClick={() => setIsAccountModalOpen(true)}
             type="button"
@@ -146,6 +162,7 @@ function App() {
           mode={modalState.mode}
           transaction={modalState.transaction ?? undefined}
           accounts={accounts}
+          categories={categories}
           onClose={closeModal}
           onSuccess={handleModalSuccess}
         />
@@ -160,6 +177,18 @@ function App() {
           onCreateAccount={createAccount}
           onUpdateAccount={updateAccount}
           onDeleteAccount={deleteAccount}
+        />
+      )}
+
+      {/* Category Management Modal */}
+      {isCategoryModalOpen && (
+        <CategoryManagementModal
+          isOpen={isCategoryModalOpen}
+          onClose={() => setIsCategoryModalOpen(false)}
+          categories={categories}
+          onCreateCategory={createCategory}
+          onUpdateCategory={updateCategory}
+          onDeleteCategory={deleteCategory}
         />
       )}
     </div>

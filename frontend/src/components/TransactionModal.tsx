@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import type { Transaction, Account } from "../types";
+import type { Transaction, Account, Category } from "../types";
 import { TransactionForm } from "./TransactionForm";
 import "./TransactionModal.css";
 
@@ -8,6 +8,7 @@ interface TransactionModalProps {
   mode: "add" | "edit";
   transaction?: Transaction;
   accounts: Account[];
+  categories: Category[];
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -17,6 +18,7 @@ export function TransactionModal({
   mode,
   transaction,
   accounts,
+  categories,
   onClose,
   onSuccess,
 }: TransactionModalProps) {
@@ -127,6 +129,7 @@ export function TransactionModal({
         <div className="modal-body">
           <TransactionForm
             accounts={accounts}
+            categories={categories}
             mode={mode}
             initialTransaction={transaction}
             onSuccess={onSuccess}

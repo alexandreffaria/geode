@@ -27,10 +27,11 @@ func main() {
 	// Initialize handlers
 	transactionHandler := handlers.NewTransactionHandler(ledger)
 	accountHandler := handlers.NewAccountHandler(ledger)
+	categoryHandler := handlers.NewCategoryHandler(ledger)
 
 	// Set up routes
 	mux := http.NewServeMux()
-	registerRoutes(mux, transactionHandler, accountHandler)
+	registerRoutes(mux, transactionHandler, accountHandler, categoryHandler)
 
 	// Start server
 	port := ":8080"
@@ -43,7 +44,7 @@ func main() {
 }
 
 // registerRoutes sets up all HTTP routes with appropriate middleware
-func registerRoutes(mux *http.ServeMux, transactionHandler *handlers.TransactionHandler, accountHandler *handlers.AccountHandler) {
+func registerRoutes(mux *http.ServeMux, transactionHandler *handlers.TransactionHandler, accountHandler *handlers.AccountHandler, categoryHandler *handlers.CategoryHandler) {
 	// Transaction routes
 	mux.HandleFunc("/api/transactions", middleware.Chain(
 		func(w http.ResponseWriter, r *http.Request) {
@@ -121,6 +122,44 @@ func registerRoutes(mux *http.ServeMux, transactionHandler *handlers.Transaction
 		middleware.Logger,
 	))
 
+	// Category routes
+	mux.HandleFunc("/api/categories", middleware.Chain(
+		func(w http.ResponseWriter, r *http.Request) {
+			switch r.Method {
+			case http.MethodGet:
+				categoryHandler.GetAllCategories(w, r)
+			case http.MethodPost:
+				categoryHandler.CreateCategory(w, r)
+			default:
+				handlers.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
+			}
+		},
+		middleware.CORS,
+		middleware.Logger,
+	))
+
+	mux.HandleFunc("/api/categories/", middleware.Chain(
+		func(w http.ResponseWriter, r *http.Request) {
+			name := r.URL.Path[len("/api/categories/"):]
+			if name == "" {
+				handlers.WriteError(w, http.StatusBadRequest, "Category name required")
+				return
+			}
+			switch r.Method {
+			case http.MethodGet:
+				categoryHandler.GetCategoryByName(w, r)
+			case http.MethodPut:
+				categoryHandler.UpdateCategory(w, r)
+			case http.MethodDelete:
+				categoryHandler.DeleteCategory(w, r)
+			default:
+				handlers.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
+			}
+		},
+		middleware.CORS,
+		middleware.Logger,
+	))
+
 	// Health check endpoint
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -131,15 +170,20 @@ func registerRoutes(mux *http.ServeMux, transactionHandler *handlers.Transaction
 // logEndpoints logs all available API endpoints
 func logEndpoints() {
 	log.Printf("API endpoints:")
-	log.Printf("  POST   /api/transactions       - Create transaction")
-	log.Printf("  GET    /api/transactions       - List all transactions")
-	log.Printf("  GET    /api/transactions/:id   - Get transaction by ID")
-	log.Printf("  PUT    /api/transactions/:id   - Update transaction")
-	log.Printf("  DELETE /api/transactions/:id   - Delete transaction")
-	log.Printf("  GET    /api/accounts           - List all accounts")
-	log.Printf("  POST   /api/accounts           - Create account")
-	log.Printf("  GET    /api/accounts/:name     - Get account by name")
-	log.Printf("  PUT    /api/accounts/:name     - Update account")
-	log.Printf("  DELETE /api/accounts/:name     - Delete account")
-	log.Printf("  GET    /health                 - Health check")
+	log.Printf("  POST   /api/transactions         - Create transaction")
+	log.Printf("  GET    /api/transactions         - List all transactions")
+	log.Printf("  GET    /api/transactions/:id     - Get transaction by ID")
+	log.Printf("  PUT    /api/transactions/:id     - Update transaction")
+	log.Printf("  DELETE /api/transactions/:id     - Delete transaction")
+	log.Printf("  GET    /api/accounts             - List all accounts")
+	log.Printf("  POST   /api/accounts             - Create account")
+	log.Printf("  GET    /api/accounts/:name       - Get account by name")
+	log.Printf("  PUT    /api/accounts/:name       - Update account")
+	log.Printf("  DELETE /api/accounts/:name       - Delete account")
+	log.Printf("  GET    /api/categories           - List all categories")
+	log.Printf("  POST   /api/categories           - Create category")
+	log.Printf("  GET    /api/categories/:name     - Get category by name")
+	log.Printf("  PUT    /api/categories/:name     - Update category")
+	log.Printf("  DELETE /api/categories/:name     - Delete category")
+	log.Printf("  GET    /health                   - Health check")
 }

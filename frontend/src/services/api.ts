@@ -5,6 +5,9 @@ import type {
   ApiError,
   CreateAccountRequest,
   UpdateAccountRequest,
+  Category,
+  CreateCategoryRequest,
+  UpdateCategoryRequest,
 } from "../types";
 
 const API_BASE_URL = "/api";
@@ -138,6 +141,54 @@ class ApiService {
   async deleteAccount(name: string): Promise<void> {
     const response = await fetch(
       `${API_BASE_URL}/accounts/${encodeURIComponent(name)}`,
+      {
+        method: "DELETE",
+      },
+    );
+    if (!response.ok) {
+      const error: ApiError = await response.json().catch(() => ({
+        error: `HTTP error! status: ${response.status}`,
+      }));
+      throw new Error(error.error);
+    }
+  }
+
+  async getCategories(): Promise<Category[]> {
+    const response = await fetch(`${API_BASE_URL}/categories`);
+    return this.handleResponse<Category[]>(response);
+  }
+
+  async createCategory(data: CreateCategoryRequest): Promise<Category> {
+    const response = await fetch(`${API_BASE_URL}/categories`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse<Category>(response);
+  }
+
+  async updateCategory(
+    name: string,
+    data: UpdateCategoryRequest,
+  ): Promise<Category> {
+    const response = await fetch(
+      `${API_BASE_URL}/categories/${encodeURIComponent(name)}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      },
+    );
+    return this.handleResponse<Category>(response);
+  }
+
+  async deleteCategory(name: string): Promise<void> {
+    const response = await fetch(
+      `${API_BASE_URL}/categories/${encodeURIComponent(name)}`,
       {
         method: "DELETE",
       },

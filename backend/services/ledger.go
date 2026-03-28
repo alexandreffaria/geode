@@ -436,3 +436,154 @@ func (s *LedgerService) DeleteAccount(name string) error {
 	}
 	return s.storage.DeleteAccount(name)
 }
+
+// GetAllCategories retrieves all categories
+func (s *LedgerService) GetAllCategories() ([]*models.Category, error) {
+	return s.storage.GetAllCategories()
+}
+
+// GetCategoryByName retrieves a category by name
+func (s *LedgerService) GetCategoryByName(name string) (*models.Category, error) {
+	return s.storage.GetCategoryByName(name)
+}
+
+// CreateCategory creates a new category with the given parameters.
+// If gradientStart or gradientEnd are empty, random ones are generated via NewCategory.
+// If parentName is set, the parent category must exist.
+func (s *LedgerService) CreateCategory(name string, categoryType string, parentName *string, gradientStart, gradientEnd, imageURL string) (*models.Category, error) {
+	if name == "" {
+		return nil, errors.New("category name is required")
+	}
+
+	if categoryType != "income" && categoryType != "expense" {
+		return nil, errors.New("type must be 'income' or 'expense'")
+	}
+
+	// Check for duplicate
+	existing, err := s.storage.GetCategoryByName(name)
+	if err != nil {
+		return nil, err
+	}
+	if existing != nil {
+		return nil, errors.New("category already exists")
+	}
+
+	// If parentName is set, verify parent exists
+	if parentName != nil && *parentName != "" {
+		parent, err := s.storage.GetCategoryByName(*parentName)
+		if err != nil {
+			return nil, err
+		}
+		if parent == nil {
+			return nil, errors.New("parent category not found")
+		}
+	}
+
+	category := models.NewCategory(name, categoryType, parentName)
+
+	if gradientStart != "" {
+		category.GradientStart = gradientStart
+	}
+	if gradientEnd != "" {
+		category.GradientEnd = gradientEnd
+	}
+	if imageURL != "" {
+		category.ImageURL = imageURL
+	}
+
+	if err := s.storage.SaveCategory(category); err != nil {
+		return nil, err
+	}
+	return category, nil
+}
+
+// UpdateCategory updates an existing category's fields.
+// When req.Name is set and different, the category is renamed (delete old + save new).
+// When req.ParentName is set to empty string "", the parent is cleared (top-level).
+func (s *LedgerService) UpdateCategory(name string, req models.CategoryUpdateRequest) (*models.Category, error) {
+	category, err := s.storage.GetCategoryByName(name)
+	if err != nil {
+		return nil, err
+	}
+	if category == nil {
+		return nil, errors.New("category not found")
+	}
+
+	// Handle rename: check new name is not taken
+	if req.Name != nil && *req.Name != "" && *req.Name != category.Name {
+		existing, err := s.storage.GetCategoryByName(*req.Name)
+		if err != nil {
+			return nil, err
+		}
+		if existing != nil {
+			return nil, errors.New("a category with that name already exists")
+		}
+		// Delete old record, will save under new name below
+		if err := s.storage.DeleteCategory(category.Name); err != nil {
+			return nil, err
+		}
+		category.Name = *req.Name
+	}
+
+	// Update parent: nil pointer = not provided; non-nil pointer = update
+	// empty string "" = clear parent (make top-level)
+	if req.ParentName != nil {
+		if *req.ParentName == "" {
+			category.ParentName = nil
+		} else {
+			// Verify new parent exists
+			parent, err := s.storage.GetCategoryByName(*req.ParentName)
+			if err != nil {
+				return nil, err
+			}
+			if parent == nil {
+				return nil, errors.New("parent category not found")
+			}
+			category.ParentName = req.ParentName
+		}
+	}
+
+	if req.Type != nil {
+		if *req.Type != "income" && *req.Type != "expense" {
+			return nil, errors.New("type must be 'income' or 'expense'")
+		}
+		category.Type = *req.Type
+	}
+
+	if req.GradientStart != nil {
+		category.GradientStart = *req.GradientStart
+	}
+	if req.GradientEnd != nil {
+		category.GradientEnd = *req.GradientEnd
+	}
+	if req.ImageURL != nil {
+		category.ImageURL = *req.ImageURL
+	}
+
+	category.LastUpdated = time.Now()
+
+	// If we renamed, the old record was deleted; save as new
+	if req.Name != nil && *req.Name != "" && *req.Name != name {
+		if err := s.storage.SaveCategory(category); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := s.storage.UpdateCategory(category); err != nil {
+			return nil, err
+		}
+	}
+
+	return category, nil
+}
+
+// DeleteCategory deletes a category by name
+func (s *LedgerService) DeleteCategory(name string) error {
+	category, err := s.storage.GetCategoryByName(name)
+	if err != nil {
+		return err
+	}
+	if category == nil {
+		return errors.New("category not found")
+	}
+	return s.storage.DeleteCategory(name)
+}
