@@ -23,11 +23,6 @@ func NewCategoryHandler(service *services.LedgerService) *CategoryHandler {
 
 // GetAllCategories handles GET /api/categories
 func (h *CategoryHandler) GetAllCategories(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-
 	categories, err := h.service.GetAllCategories()
 	if err != nil {
 		log.Printf("Error getting categories: %v", err)
@@ -41,11 +36,6 @@ func (h *CategoryHandler) GetAllCategories(w http.ResponseWriter, r *http.Reques
 
 // GetCategoryByName handles GET /api/categories/:name
 func (h *CategoryHandler) GetCategoryByName(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-
 	name := r.URL.Path[len("/api/categories/"):]
 	if name == "" {
 		WriteError(w, http.StatusBadRequest, "Category name required")
@@ -79,11 +69,6 @@ type createCategoryRequest struct {
 
 // CreateCategory handles POST /api/categories
 func (h *CategoryHandler) CreateCategory(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-
 	var req createCategoryRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("Error decoding create category request: %v", err)
@@ -118,11 +103,6 @@ func (h *CategoryHandler) CreateCategory(w http.ResponseWriter, r *http.Request)
 
 // UpdateCategory handles PUT /api/categories/:name
 func (h *CategoryHandler) UpdateCategory(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPut {
-		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-
 	name := r.URL.Path[len("/api/categories/"):]
 	if name == "" {
 		WriteError(w, http.StatusBadRequest, "Category name required")
@@ -155,11 +135,6 @@ func (h *CategoryHandler) UpdateCategory(w http.ResponseWriter, r *http.Request)
 
 // DeleteCategory handles DELETE /api/categories/:name
 func (h *CategoryHandler) DeleteCategory(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodDelete {
-		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-
 	name := r.URL.Path[len("/api/categories/"):]
 	if name == "" {
 		WriteError(w, http.StatusBadRequest, "Category name required")

@@ -1,7 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import type { Transaction, Account, Category } from "../types";
 import { TransactionForm } from "./TransactionForm";
-import "./TransactionModal.css";
+import { useModalAccessibility } from "../hooks/useModalAccessibility";
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -24,72 +24,7 @@ export function TransactionModal({
 }: TransactionModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
 
-  // Handle ESC key press
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-      }
-
-      // Tab trap logic for accessibility
-      if (e.key === "Tab") {
-        const focusableElements = modalRef.current?.querySelectorAll(
-          'button, input, select, textarea, [tabindex]:not([tabindex="-1"])',
-        );
-
-        if (focusableElements && focusableElements.length > 0) {
-          const firstElement = focusableElements[0] as HTMLElement;
-          const lastElement = focusableElements[
-            focusableElements.length - 1
-          ] as HTMLElement;
-
-          if (e.shiftKey && document.activeElement === firstElement) {
-            e.preventDefault();
-            lastElement.focus();
-          } else if (!e.shiftKey && document.activeElement === lastElement) {
-            e.preventDefault();
-            firstElement.focus();
-          }
-        }
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener("keydown", handleKeyDown);
-      return () => document.removeEventListener("keydown", handleKeyDown);
-    }
-  }, [isOpen, onClose]);
-
-  // Prevent body scroll when modal is open
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-      return () => {
-        document.body.style.overflow = "unset";
-      };
-    }
-  }, [isOpen]);
-
-  // Focus management
-  useEffect(() => {
-    if (isOpen) {
-      // Store previously focused element
-      const previouslyFocused = document.activeElement as HTMLElement;
-
-      // Focus first input in modal after a brief delay
-      setTimeout(() => {
-        const firstInput = modalRef.current?.querySelector(
-          "input, select, textarea",
-        );
-        (firstInput as HTMLElement)?.focus();
-      }, 100);
-
-      // Return focus on unmount
-      return () => {
-        previouslyFocused?.focus();
-      };
-    }
-  }, [isOpen]);
+  useModalAccessibility(isOpen, onClose, modalRef);
 
   // Handle backdrop click
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {

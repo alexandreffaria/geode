@@ -1,3 +1,7 @@
+@import "./styles/globals.css";
+@import "./styles/modal-base.css";
+@import "./styles/combobox.css";
+
 * {
   box-sizing: border-box;
   margin: 0;

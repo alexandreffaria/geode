@@ -1,4 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useEffect, useCallback } from "react";
+import { useCombobox } from "../../hooks/useCombobox";
+import { Avatar } from "../ui/Avatar";
 import type { Category } from "../../types";
 import "./CategorySelect.css";
 
@@ -23,38 +25,6 @@ function getCategoryDisplayName(
   return category.name;
 }
 
-const DEFAULT_GRADIENT_START = "#4a9eff";
-const DEFAULT_GRADIENT_END = "#6bff6b";
-
-interface CategoryAvatarProps {
-  category: Category;
-  size?: number;
-}
-
-function CategoryAvatar({ category, size = 24 }: CategoryAvatarProps) {
-  if (category.image_url) {
-    return (
-      <img
-        className="category-select-avatar"
-        src={category.image_url}
-        alt={category.name}
-        style={{ width: size, height: size }}
-      />
-    );
-  }
-  return (
-    <div
-      className="category-select-avatar category-select-avatar--gradient"
-      style={{
-        width: size,
-        height: size,
-        background: `linear-gradient(135deg, ${category.gradient_start || DEFAULT_GRADIENT_START}, ${category.gradient_end || DEFAULT_GRADIENT_END})`,
-      }}
-      aria-hidden="true"
-    />
-  );
-}
-
 export function CategorySelect({
   value,
   onChange,
@@ -62,25 +32,52 @@ export function CategorySelect({
   transactionType,
   disabled = false,
 }: CategorySelectProps) {
-  const [inputValue, setInputValue] = useState(value);
-  const [isOpen, setIsOpen] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(-1);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const listRef = useRef<HTMLUListElement>(null);
-
-  // Sync inputValue when value prop changes externally
-  useEffect(() => {
-    setInputValue(value);
-  }, [value]);
-
   // Filter categories by the matching type for this transaction
   const categoryType = transactionType === "purchase" ? "expense" : "income";
   const typeFilteredCategories = categories.filter(
     (cat) => cat.type === categoryType,
   );
 
-  const filteredCategories = typeFilteredCategories.filter((cat) => {
+  // CategorySelect-specific select handler: propagates name to parent
+  const handleCategorySelect = useCallback(
+    (category: Category) => {
+      onChange(category.name);
+    },
+    [onChange],
+  );
+
+  // CategorySelect-specific clear handler
+  const handleClearCategory = useCallback(() => {
+    onChange("");
+  }, [onChange]);
+
+  const {
+    inputValue,
+    setInputValue,
+    isOpen,
+    setIsOpen,
+    activeIndex,
+    setActiveIndex,
+    containerRef,
+    inputRef,
+    listRef,
+    handleInputFocus,
+    handleSelect,
+    handleClear,
+  } = useCombobox<Category>({
+    items: typeFilteredCategories,
+    onSelect: handleCategorySelect,
+    onClear: handleClearCategory,
+    getItemLabel: (c) => c.name,
+  });
+
+  // Sync inputValue when value prop changes externally
+  useEffect(() => {
+    setInputValue(value);
+  }, [value, setInputValue]);
+
+  // Filtered categories based on current inputValue
+  const displayedCategories = typeFilteredCategories.filter((cat) => {
     if (!inputValue) return true;
     const displayName = getCategoryDisplayName(
       cat,
@@ -92,7 +89,75 @@ export function CategorySelect({
     );
   });
 
-  // Close dropdown on outside click
+  // Custom handleInputChange: also clears selection when input is cleared
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setInputValue(e.target.value);
+      setIsOpen(true);
+      setActiveIndex(-1);
+      if (!e.target.value) {
+        onChange("");
+      }
+    },
+    [setInputValue, setIsOpen, setActiveIndex, onChange],
+  );
+
+  // Custom handleKeyDown: uses displayedCategories and reverts on Escape/Tab
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (!isOpen) {
+        if (e.key === "ArrowDown" || e.key === "Enter") {
+          setIsOpen(true);
+          setActiveIndex(0);
+          e.preventDefault();
+        }
+        return;
+      }
+
+      switch (e.key) {
+        case "ArrowDown":
+          e.preventDefault();
+          setActiveIndex(
+            activeIndex < displayedCategories.length - 1
+              ? activeIndex + 1
+              : activeIndex,
+          );
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          setActiveIndex(activeIndex > 0 ? activeIndex - 1 : 0);
+          break;
+        case "Enter":
+          e.preventDefault();
+          if (activeIndex >= 0 && activeIndex < displayedCategories.length) {
+            handleSelect(displayedCategories[activeIndex]);
+          }
+          break;
+        case "Escape":
+          e.preventDefault();
+          setIsOpen(false);
+          setInputValue(value);
+          setActiveIndex(-1);
+          break;
+        case "Tab":
+          setIsOpen(false);
+          setInputValue(value);
+          break;
+      }
+    },
+    [
+      isOpen,
+      displayedCategories,
+      activeIndex,
+      handleSelect,
+      setIsOpen,
+      setInputValue,
+      setActiveIndex,
+      value,
+    ],
+  );
+
+  // Override outside-click to revert inputValue if it doesn't match selected value
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -100,7 +165,6 @@ export function CategorySelect({
         !containerRef.current.contains(e.target as Node)
       ) {
         setIsOpen(false);
-        // If user typed something that doesn't match the selected value, revert
         if (inputValue !== value) {
           setInputValue(value);
         }
@@ -108,91 +172,7 @@ export function CategorySelect({
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [inputValue, value]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(e.target.value);
-    setIsOpen(true);
-    setActiveIndex(-1);
-    // If user clears the input, clear the selection
-    if (!e.target.value) {
-      onChange("");
-    }
-  };
-
-  const handleInputFocus = () => {
-    setIsOpen(true);
-    setActiveIndex(-1);
-  };
-
-  const handleSelect = useCallback(
-    (category: Category) => {
-      onChange(category.name);
-      setInputValue(category.name);
-      setIsOpen(false);
-      setActiveIndex(-1);
-      inputRef.current?.blur();
-    },
-    [onChange],
-  );
-
-  const handleClear = () => {
-    onChange("");
-    setInputValue("");
-    setIsOpen(false);
-    setActiveIndex(-1);
-    inputRef.current?.focus();
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!isOpen) {
-      if (e.key === "ArrowDown" || e.key === "Enter") {
-        setIsOpen(true);
-        setActiveIndex(0);
-        e.preventDefault();
-      }
-      return;
-    }
-
-    switch (e.key) {
-      case "ArrowDown":
-        e.preventDefault();
-        setActiveIndex((prev) =>
-          prev < filteredCategories.length - 1 ? prev + 1 : prev,
-        );
-        break;
-      case "ArrowUp":
-        e.preventDefault();
-        setActiveIndex((prev) => (prev > 0 ? prev - 1 : 0));
-        break;
-      case "Enter":
-        e.preventDefault();
-        if (activeIndex >= 0 && activeIndex < filteredCategories.length) {
-          handleSelect(filteredCategories[activeIndex]);
-        }
-        break;
-      case "Escape":
-        e.preventDefault();
-        setIsOpen(false);
-        setInputValue(value);
-        setActiveIndex(-1);
-        break;
-      case "Tab":
-        setIsOpen(false);
-        setInputValue(value);
-        break;
-    }
-  };
-
-  // Scroll active item into view
-  useEffect(() => {
-    if (activeIndex >= 0 && listRef.current) {
-      const items = listRef.current.querySelectorAll<HTMLLIElement>(
-        ".category-select-option",
-      );
-      items[activeIndex]?.scrollIntoView({ block: "nearest" });
-    }
-  }, [activeIndex]);
+  }, [inputValue, value, containerRef, setIsOpen, setInputValue]);
 
   const selectedCategory = typeFilteredCategories.find((c) => c.name === value);
 
@@ -201,14 +181,20 @@ export function CategorySelect({
       className={`category-select${disabled ? " category-select--disabled" : ""}`}
       ref={containerRef}
     >
-      <div className="category-select-input-wrapper">
+      <div className="combobox-input-wrapper">
         {selectedCategory && !isOpen && (
-          <CategoryAvatar category={selectedCategory} size={20} />
+          <Avatar
+            name={selectedCategory.name}
+            gradientStart={selectedCategory.gradient_start}
+            gradientEnd={selectedCategory.gradient_end}
+            imageUrl={selectedCategory.image_url || undefined}
+            size={20}
+          />
         )}
         <input
           ref={inputRef}
           type="text"
-          className="category-select-input"
+          className="combobox-input"
           value={inputValue}
           onChange={handleInputChange}
           onFocus={handleInputFocus}
@@ -222,14 +208,14 @@ export function CategorySelect({
           aria-controls="category-select-listbox"
           aria-activedescendant={
             activeIndex >= 0
-              ? `category-option-${filteredCategories[activeIndex]?.name}`
+              ? `category-option-${displayedCategories[activeIndex]?.name}`
               : undefined
           }
         />
         {value && !disabled && (
           <button
             type="button"
-            className="category-select-clear"
+            className="combobox-clear-btn"
             onClick={handleClear}
             aria-label="Clear category selection"
             tabIndex={-1}
@@ -237,7 +223,7 @@ export function CategorySelect({
             ×
           </button>
         )}
-        <span className="category-select-chevron" aria-hidden="true">
+        <span className="combobox-chevron" aria-hidden="true">
           ▾
         </span>
       </div>
@@ -246,18 +232,18 @@ export function CategorySelect({
         <ul
           id="category-select-listbox"
           ref={listRef}
-          className="category-select-dropdown"
+          className="combobox-dropdown"
           role="listbox"
           aria-label="Categories"
         >
-          {filteredCategories.length === 0 ? (
-            <li className="category-select-empty">No categories found</li>
+          {displayedCategories.length === 0 ? (
+            <li className="combobox-empty">No categories found</li>
           ) : (
-            filteredCategories.map((cat, idx) => (
+            displayedCategories.map((cat, idx) => (
               <li
                 key={cat.name}
                 id={`category-option-${cat.name}`}
-                className={`category-select-option${idx === activeIndex ? " category-select-option--active" : ""}${cat.name === value ? " category-select-option--selected" : ""}`}
+                className={`combobox-option${idx === activeIndex ? " combobox-option--active" : ""}${cat.name === value ? " combobox-option--selected" : ""}`}
                 role="option"
                 aria-selected={cat.name === value}
                 onMouseDown={(e) => {
@@ -267,12 +253,18 @@ export function CategorySelect({
                 }}
                 onMouseEnter={() => setActiveIndex(idx)}
               >
-                <CategoryAvatar category={cat} size={20} />
-                <span className="category-select-option-name">
+                <Avatar
+                  name={cat.name}
+                  gradientStart={cat.gradient_start}
+                  gradientEnd={cat.gradient_end}
+                  imageUrl={cat.image_url || undefined}
+                  size={20}
+                />
+                <span className="combobox-option-label">
                   {getCategoryDisplayName(cat, typeFilteredCategories)}
                 </span>
                 {cat.name === value && (
-                  <span className="category-select-check" aria-hidden="true">
+                  <span className="combobox-check" aria-hidden="true">
                     ✓
                   </span>
                 )}

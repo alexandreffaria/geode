@@ -23,11 +23,6 @@ func NewTransactionHandler(ledger *services.LedgerService) *TransactionHandler {
 
 // CreateTransaction handles POST /api/transactions
 func (h *TransactionHandler) CreateTransaction(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-
 	var transaction models.Transaction
 	if err := json.NewDecoder(r.Body).Decode(&transaction); err != nil {
 		log.Printf("Error decoding transaction: %v", err)
@@ -53,11 +48,6 @@ func (h *TransactionHandler) CreateTransaction(w http.ResponseWriter, r *http.Re
 
 // GetAllTransactions handles GET /api/transactions
 func (h *TransactionHandler) GetAllTransactions(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-
 	transactions, err := h.ledger.GetAllTransactions()
 	if err != nil {
 		log.Printf("Error getting transactions: %v", err)
@@ -71,11 +61,6 @@ func (h *TransactionHandler) GetAllTransactions(w http.ResponseWriter, r *http.R
 
 // GetTransactionByID handles GET /api/transactions/:id
 func (h *TransactionHandler) GetTransactionByID(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-
 	// Extract ID from URL path (simple implementation)
 	id := r.URL.Path[len("/api/transactions/"):]
 	if id == "" {
@@ -95,11 +80,6 @@ func (h *TransactionHandler) GetTransactionByID(w http.ResponseWriter, r *http.R
 
 // UpdateTransaction handles PUT /api/transactions/:id
 func (h *TransactionHandler) UpdateTransaction(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPut {
-		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-
 	// Extract ID from URL
 	id := r.URL.Path[len("/api/transactions/"):]
 	if id == "" {
@@ -135,11 +115,6 @@ func (h *TransactionHandler) UpdateTransaction(w http.ResponseWriter, r *http.Re
 
 // DeleteTransaction handles DELETE /api/transactions/:id
 func (h *TransactionHandler) DeleteTransaction(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodDelete {
-		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-
 	// Extract ID from URL
 	id := r.URL.Path[len("/api/transactions/"):]
 	if id == "" {

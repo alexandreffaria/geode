@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback } from "react";
 import type {
   Category,
   CreateCategoryRequest,
   UpdateCategoryRequest,
 } from "../types";
 import { apiService } from "../services/api";
+import { useResource } from "./useResource";
 
 export interface UseCategoriesResult {
   categories: Category[];
@@ -16,33 +17,17 @@ export interface UseCategoriesResult {
   deleteCategory: (name: string) => Promise<void>;
 }
 
-/**
- * Custom hook for fetching and managing categories
- * Handles loading states, errors, and provides CRUD operations
- */
 export function useCategories(): UseCategoriesResult {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const refetch = useCallback(async () => {
-    try {
-      setError(null);
-      setLoading(true);
-      const data = await apiService.getCategories();
-      setCategories(data);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to fetch categories",
-      );
-    } finally {
-      setLoading(false);
-    }
+  const fetchCategories = useCallback(async (): Promise<Category[]> => {
+    return apiService.getCategories();
   }, []);
 
-  useEffect(() => {
-    refetch();
-  }, [refetch]);
+  const {
+    data: categories,
+    loading,
+    error,
+    refetch,
+  } = useResource<Category[]>(fetchCategories, []);
 
   const createCategory = useCallback(
     async (data: CreateCategoryRequest): Promise<void> => {

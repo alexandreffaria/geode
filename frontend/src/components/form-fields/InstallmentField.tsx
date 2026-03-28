@@ -1,13 +1,18 @@
 interface InstallmentFieldProps {
   months: number;
   onChange: (months: number) => void;
+  disabled?: boolean;
 }
 
 /**
  * Form field for configuring installment payments.
  * Allows the user to specify how many installments to split the amount into.
  */
-export function InstallmentField({ months, onChange }: InstallmentFieldProps) {
+export function InstallmentField({
+  months,
+  onChange,
+  disabled,
+}: InstallmentFieldProps) {
   return (
     <div className="form-group">
       <label htmlFor="installment-months">Number of installments</label>
@@ -20,6 +25,7 @@ export function InstallmentField({ months, onChange }: InstallmentFieldProps) {
         onChange={(e) =>
           onChange(Math.max(2, parseInt(e.target.value, 10) || 2))
         }
+        disabled={disabled}
         required
       />
       <span className="field-helper-text">

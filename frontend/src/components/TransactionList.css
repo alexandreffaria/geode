@@ -113,14 +113,6 @@
   font-family: "Courier New", monospace;
 }
 
-.amount.positive {
-  color: #6bff6b;
-}
-
-.amount.negative {
-  color: #ff6b6b;
-}
-
 /* Actions Column */
 .actions-column {
   width: 180px;

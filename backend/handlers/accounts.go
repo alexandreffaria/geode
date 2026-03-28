@@ -23,11 +23,6 @@ func NewAccountHandler(ledger *services.LedgerService) *AccountHandler {
 
 // GetAllAccounts handles GET /api/accounts
 func (h *AccountHandler) GetAllAccounts(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-
 	accounts, err := h.ledger.GetAllAccounts()
 	if err != nil {
 		log.Printf("Error getting accounts: %v", err)
@@ -41,11 +36,6 @@ func (h *AccountHandler) GetAllAccounts(w http.ResponseWriter, r *http.Request) 
 
 // GetAccountByName handles GET /api/accounts/:name
 func (h *AccountHandler) GetAccountByName(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-
 	name := r.URL.Path[len("/api/accounts/"):]
 	if name == "" {
 		WriteError(w, http.StatusBadRequest, "Account name required")
@@ -79,11 +69,6 @@ type createAccountRequest struct {
 
 // CreateAccount handles POST /api/accounts
 func (h *AccountHandler) CreateAccount(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-
 	var req createAccountRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("Error decoding create account request: %v", err)
@@ -113,11 +98,6 @@ func (h *AccountHandler) CreateAccount(w http.ResponseWriter, r *http.Request) {
 
 // UpdateAccount handles PUT /api/accounts/:name
 func (h *AccountHandler) UpdateAccount(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPut {
-		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-
 	name := r.URL.Path[len("/api/accounts/"):]
 	if name == "" {
 		WriteError(w, http.StatusBadRequest, "Account name required")
@@ -150,11 +130,6 @@ func (h *AccountHandler) UpdateAccount(w http.ResponseWriter, r *http.Request) {
 
 // DeleteAccount handles DELETE /api/accounts/:name
 func (h *AccountHandler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodDelete {
-		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-
 	name := r.URL.Path[len("/api/accounts/"):]
 	if name == "" {
 		WriteError(w, http.StatusBadRequest, "Account name required")

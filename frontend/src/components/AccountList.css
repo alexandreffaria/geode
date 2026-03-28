@@ -1,5 +1,5 @@
 .account-list-container {
-  background: #1e1e1e;
+  background: var(--bg-secondary);
   border-radius: 8px;
   padding: 24px;
   margin-bottom: 24px;
@@ -9,7 +9,7 @@
 .account-list-container h2 {
   margin-top: 0;
   margin-bottom: 20px;
-  color: #e0e0e0;
+  color: var(--text-primary);
   font-size: 1.5rem;
 }
 
@@ -18,14 +18,14 @@
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  background: #2a2a2a;
+  background: var(--bg-tertiary);
   border-radius: 6px;
   margin-bottom: 20px;
-  border: 2px solid #3a3a3a;
+  border: 2px solid var(--border-color);
 }
 
 .total-label {
-  color: #b0b0b0;
+  color: var(--text-secondary);
   font-size: 1.1rem;
   font-weight: 600;
 }
@@ -36,14 +36,6 @@
   font-family: "Courier New", monospace;
 }
 
-.total-amount.positive {
-  color: #6bff6b;
-}
-
-.total-amount.negative {
-  color: #ff6b6b;
-}
-
 .accounts-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -51,8 +43,8 @@
 }
 
 .account-card {
-  background: #2a2a2a;
-  border: 1px solid #3a3a3a;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   padding: 16px;
   transition: all 0.2s;
@@ -62,7 +54,7 @@
 }
 
 .account-card:hover {
-  border-color: #4a9eff;
+  border-color: var(--accent-blue);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(74, 158, 255, 0.2);
 }
@@ -93,7 +85,7 @@
 }
 
 .account-name {
-  color: #e0e0e0;
+  color: var(--text-primary);
   font-size: 0.9rem;
   font-weight: 600;
   white-space: nowrap;
@@ -102,9 +94,9 @@
 }
 
 .account-currency-badge {
-  background: #1e1e1e;
-  border: 1px solid #3a3a3a;
-  color: #b0b0b0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
   border-radius: 4px;
   padding: 1px 5px;
   font-size: 0.7rem;
@@ -117,14 +109,6 @@
   font-size: 1.3rem;
   font-weight: 700;
   font-family: "Courier New", monospace;
-}
-
-.account-balance.positive {
-  color: #6bff6b;
-}
-
-.account-balance.negative {
-  color: #ff6b6b;
 }
 
 @media (max-width: 768px) {

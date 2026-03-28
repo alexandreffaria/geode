@@ -1,0 +1,137 @@
+/* =============================================================================
+   GLOBAL UTILITY CLASSES
+   These classes are used across multiple components. Define them once here.
+   Import this file in main.tsx or index.css.
+   ============================================================================= */
+
+/* Amount color utilities - used in AccountList, TransactionList, AccountManagementModal */
+.amount-positive {
+  color: var(--accent-green);
+}
+
+.amount-negative {
+  color: var(--accent-red);
+}
+
+.amount-neutral {
+  color: var(--text-secondary);
+}
+
+/* Monospace font for financial amounts */
+.amount-mono {
+  font-family: "Courier New", monospace;
+}
+
+/* Button base styles - used in AccountManagementModal, CategoryManagementModal */
+.btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition:
+    background-color 0.2s,
+    opacity 0.2s;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn--primary {
+  background-color: var(--accent-blue);
+  color: #fff;
+}
+
+.btn--primary:hover:not(:disabled) {
+  background-color: #3a8eef;
+}
+
+.btn--secondary {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.btn--secondary:hover:not(:disabled) {
+  background-color: var(--bg-secondary);
+}
+
+.btn--danger {
+  background-color: transparent;
+  color: var(--accent-red);
+  border: 1px solid var(--accent-red);
+}
+
+.btn--danger:hover:not(:disabled) {
+  background-color: rgba(255, 107, 107, 0.1);
+}
+
+/* Icon button base - used in AccountManagementModal, CategoryManagementModal */
+.icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+  color: var(--text-secondary);
+  font-size: 1rem;
+}
+
+.icon-btn:hover {
+  background-color: var(--bg-tertiary);
+}
+
+.icon-btn--edit:hover {
+  color: var(--accent-blue);
+}
+
+.icon-btn--delete:hover {
+  color: var(--accent-red);
+}
+
+/* Form field label utilities */
+.field-required::after {
+  content: " *";
+  color: var(--accent-red);
+}
+
+.field-optional {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  font-weight: 400;
+  margin-left: 4px;
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  color: var(--text-tertiary);
+  padding: 24px;
+  font-size: 0.9rem;
+}
+
+/* Divider */
+.section-divider {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 16px 0;
+}
+
+/* Error message */
+.error-message {
+  color: var(--accent-red);
+  font-size: 0.85rem;
+  padding: 8px 12px;
+  background-color: rgba(255, 107, 107, 0.1);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 107, 107, 0.3);
+}

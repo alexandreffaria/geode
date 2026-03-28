@@ -45,26 +45,11 @@
   opacity: 0.6;
 }
 
-/* Date input specific styles */
-.form-group input[type="datetime-local"] {
-  color-scheme: dark;
-}
-
-.form-group input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-  filter: invert(1);
-  cursor: pointer;
-}
-
 /* Form actions (buttons container) */
 .form-actions {
   display: flex;
   gap: 12px;
   margin-top: 8px;
-}
-
-/* When only one button (legacy mode), make it full width */
-.form-actions:has(button:only-child) {
-  justify-content: stretch;
 }
 
 .submit-button,
@@ -126,20 +111,4 @@
   border-radius: 4px;
   color: #6bff6b;
   font-size: 0.9rem;
-}
-
-/* Legacy container styles for backward compatibility if form is used standalone */
-.transaction-form-container {
-  background: #1e1e1e;
-  border-radius: 8px;
-  padding: 24px;
-  margin-bottom: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}
-
-.transaction-form-container h2 {
-  margin-top: 0;
-  margin-bottom: 20px;
-  color: #e0e0e0;
-  font-size: 1.5rem;
 }

@@ -1,6 +1,6 @@
 .app {
   min-height: 100vh;
-  background: #121212;
+  background: var(--bg-primary);
   padding: 20px;
 }
 
@@ -11,7 +11,11 @@
   gap: 16px;
   margin-bottom: 40px;
   padding: 20px 28px;
-  background: linear-gradient(135deg, #1e1e1e 0%, #2a2a2a 100%);
+  background: linear-gradient(
+    135deg,
+    var(--bg-secondary) 0%,
+    var(--bg-tertiary) 100%
+  );
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
@@ -24,14 +28,14 @@
 
 .app-header h1 {
   margin: 0;
-  color: #e0e0e0;
+  color: var(--text-primary);
   font-size: 2rem;
   font-weight: 700;
 }
 
 .subtitle {
   margin: 0;
-  color: #888;
+  color: var(--text-tertiary);
   font-size: 1rem;
 }
 
@@ -57,34 +61,34 @@
 }
 
 .nav-button:focus {
-  outline: 2px solid #4a9eff;
+  outline: 2px solid var(--accent-blue);
   outline-offset: 2px;
 }
 
 .nav-button--accounts {
-  background: #2a2a2a;
-  border: 1px solid #3a3a3a;
-  color: #e0e0e0;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
 }
 
 .nav-button--accounts:hover {
   background: #333;
-  border-color: #4a9eff;
-  color: #4a9eff;
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(74, 158, 255, 0.2);
 }
 
 .nav-button--categories {
-  background: #2a2a2a;
-  border: 1px solid #3a3a3a;
-  color: #e0e0e0;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
 }
 
 .nav-button--categories:hover {
   background: #333;
-  border-color: #6bff6b;
-  color: #6bff6b;
+  border-color: var(--accent-green);
+  color: var(--accent-green);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(107, 255, 107, 0.2);
 }
@@ -92,7 +96,7 @@
 .loading {
   text-align: center;
   padding: 100px 20px;
-  color: #888;
+  color: var(--text-tertiary);
   font-size: 1.5rem;
 }
 
@@ -102,7 +106,7 @@
   border-radius: 8px;
   padding: 16px 20px;
   margin-bottom: 24px;
-  color: #ff6b6b;
+  color: var(--accent-red);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -111,7 +115,7 @@
 
 .retry-button {
   padding: 8px 16px;
-  background: #ff6b6b;
+  background: var(--accent-red);
   color: white;
   border: none;
   border-radius: 4px;
@@ -147,7 +151,7 @@
 .add-transaction-button {
   width: 100%;
   padding: 16px 24px;
-  background: linear-gradient(135deg, #4a9eff 0%, #3a7ed8 100%);
+  background: linear-gradient(135deg, var(--accent-blue) 0%, #3a7ed8 100%);
   border: none;
   border-radius: 8px;
   color: white;

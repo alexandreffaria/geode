@@ -1,3 +1,4 @@
+import { PAYMENT_SCHEDULE_MODE_LABELS } from "../../constants";
 import type { PaymentSchedule, PaymentScheduleMode } from "../../types";
 import { InstallmentField } from "./InstallmentField";
 import { RecurringField } from "./RecurringField";
@@ -8,12 +9,6 @@ interface PaymentScheduleSelectorProps {
   onChange: (schedule: PaymentSchedule) => void;
   disabled?: boolean;
 }
-
-const MODE_LABELS: Record<PaymentScheduleMode, string> = {
-  none: "One-time",
-  installment: "Installments",
-  recurring: "Recurring",
-};
 
 /**
  * Composite component for selecting a payment schedule mode and configuring it.
@@ -48,7 +43,7 @@ export function PaymentScheduleSelector({
                 onClick={() => handleModeChange(mode)}
                 disabled={disabled}
               >
-                {MODE_LABELS[mode]}
+                {PAYMENT_SCHEDULE_MODE_LABELS[mode]}
               </button>
             ),
           )}
@@ -59,6 +54,7 @@ export function PaymentScheduleSelector({
         <InstallmentField
           months={value.months}
           onChange={(months) => onChange({ mode: "installment", months })}
+          disabled={disabled}
         />
       )}
 
@@ -68,6 +64,7 @@ export function PaymentScheduleSelector({
           onChange={(every_months) =>
             onChange({ mode: "recurring", every_months })
           }
+          disabled={disabled}
         />
       )}
     </div>

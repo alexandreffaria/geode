@@ -1,46 +1,23 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback } from "react";
 import type {
   Account,
   CreateAccountRequest,
   UpdateAccountRequest,
 } from "../types";
 import { apiService } from "../services/api";
+import { useResource } from "./useResource";
 
-interface UseAccountsResult {
-  accounts: Account[];
-  loading: boolean;
-  error: string | null;
-  refetch: () => Promise<void>;
-  createAccount: (data: CreateAccountRequest) => Promise<void>;
-  updateAccount: (name: string, data: UpdateAccountRequest) => Promise<void>;
-  deleteAccount: (name: string) => Promise<void>;
-}
-
-/**
- * Custom hook for fetching and managing accounts
- * Handles loading states, errors, and provides CRUD operations
- */
-export function useAccounts(): UseAccountsResult {
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const refetch = useCallback(async () => {
-    try {
-      setError(null);
-      setLoading(true);
-      const data = await apiService.getAccounts();
-      setAccounts(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch accounts");
-    } finally {
-      setLoading(false);
-    }
+export function useAccounts() {
+  const fetchAccounts = useCallback(async (): Promise<Account[]> => {
+    return apiService.getAccounts();
   }, []);
 
-  useEffect(() => {
-    refetch();
-  }, [refetch]);
+  const {
+    data: accounts,
+    loading,
+    error,
+    refetch,
+  } = useResource<Account[]>(fetchAccounts, []);
 
   const createAccount = useCallback(
     async (data: CreateAccountRequest): Promise<void> => {

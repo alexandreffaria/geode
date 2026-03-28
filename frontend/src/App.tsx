@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import type { Transaction } from "./types";
 import { apiService } from "./services/api";
 import { useTransactions } from "./hooks/useTransactions";
@@ -55,9 +55,9 @@ function App() {
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
 
   // Refetch both transactions and accounts
-  const refetchData = async () => {
+  const refetchData = useCallback(async () => {
     await Promise.all([refetchTransactions(), refetchAccounts()]);
-  };
+  }, [refetchTransactions, refetchAccounts]);
 
   // Transaction modal handler functions
   const openAddModal = () => {
@@ -156,41 +156,35 @@ function App() {
       </main>
 
       {/* Transaction Modal */}
-      {modalState.isOpen && (
-        <TransactionModal
-          isOpen={modalState.isOpen}
-          mode={modalState.mode}
-          transaction={modalState.transaction ?? undefined}
-          accounts={accounts}
-          categories={categories}
-          onClose={closeModal}
-          onSuccess={handleModalSuccess}
-        />
-      )}
+      <TransactionModal
+        isOpen={modalState.isOpen}
+        mode={modalState.mode}
+        transaction={modalState.transaction ?? undefined}
+        accounts={accounts}
+        categories={categories}
+        onClose={closeModal}
+        onSuccess={handleModalSuccess}
+      />
 
       {/* Account Management Modal */}
-      {isAccountModalOpen && (
-        <AccountManagementModal
-          isOpen={isAccountModalOpen}
-          accounts={accounts}
-          onClose={() => setIsAccountModalOpen(false)}
-          onCreateAccount={createAccount}
-          onUpdateAccount={updateAccount}
-          onDeleteAccount={deleteAccount}
-        />
-      )}
+      <AccountManagementModal
+        isOpen={isAccountModalOpen}
+        accounts={accounts}
+        onClose={() => setIsAccountModalOpen(false)}
+        onCreateAccount={createAccount}
+        onUpdateAccount={updateAccount}
+        onDeleteAccount={deleteAccount}
+      />
 
       {/* Category Management Modal */}
-      {isCategoryModalOpen && (
-        <CategoryManagementModal
-          isOpen={isCategoryModalOpen}
-          onClose={() => setIsCategoryModalOpen(false)}
-          categories={categories}
-          onCreateCategory={createCategory}
-          onUpdateCategory={updateCategory}
-          onDeleteCategory={deleteCategory}
-        />
-      )}
+      <CategoryManagementModal
+        isOpen={isCategoryModalOpen}
+        onClose={() => setIsCategoryModalOpen(false)}
+        categories={categories}
+        onCreateCategory={createCategory}
+        onUpdateCategory={updateCategory}
+        onDeleteCategory={deleteCategory}
+      />
     </div>
   );
 }

@@ -54,7 +54,16 @@ class ApiService {
       }));
       throw new Error(error.error);
     }
-    return response.json();
+    return response.json() as Promise<T>;
+  }
+
+  private async handleVoidResponse(response: Response): Promise<void> {
+    if (!response.ok) {
+      const error: ApiError = await response.json().catch(() => ({
+        error: `HTTP error! status: ${response.status}`,
+      }));
+      throw new Error(error.error);
+    }
   }
 
   async getTransactions(): Promise<Transaction[]> {
@@ -97,12 +106,7 @@ class ApiService {
     const response = await fetch(`${API_BASE_URL}/transactions/${id}`, {
       method: "DELETE",
     });
-    if (!response.ok) {
-      const error: ApiError = await response.json().catch(() => ({
-        error: `HTTP error! status: ${response.status}`,
-      }));
-      throw new Error(error.error);
-    }
+    return this.handleVoidResponse(response);
   }
 
   async getAccounts(): Promise<Account[]> {
@@ -145,12 +149,7 @@ class ApiService {
         method: "DELETE",
       },
     );
-    if (!response.ok) {
-      const error: ApiError = await response.json().catch(() => ({
-        error: `HTTP error! status: ${response.status}`,
-      }));
-      throw new Error(error.error);
-    }
+    return this.handleVoidResponse(response);
   }
 
   async getCategories(): Promise<Category[]> {
@@ -193,12 +192,7 @@ class ApiService {
         method: "DELETE",
       },
     );
-    if (!response.ok) {
-      const error: ApiError = await response.json().catch(() => ({
-        error: `HTTP error! status: ${response.status}`,
-      }));
-      throw new Error(error.error);
-    }
+    return this.handleVoidResponse(response);
   }
 }
 

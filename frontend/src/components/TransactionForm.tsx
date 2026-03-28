@@ -8,6 +8,10 @@ import type {
   PaymentSchedule,
 } from "../types";
 import { apiService } from "../services/api";
+import {
+  getDefaultFormData,
+  transactionToFormData,
+} from "../utils/transactionUtils";
 import { DateField } from "./form-fields/DateField";
 import { AmountField } from "./form-fields/AmountField";
 import { DescriptionField } from "./form-fields/DescriptionField";
@@ -23,49 +27,7 @@ interface TransactionFormProps {
   initialTransaction?: Transaction;
   onSuccess?: () => void;
   onCancel?: () => void;
-  // Legacy props for backward compatibility
-  onTransactionAdded?: () => void;
 }
-
-// Helper function to get default date for date input
-const getDefaultDate = (): string => {
-  const now = new Date();
-  // Format for date: YYYY-MM-DD
-  return now.toISOString().slice(0, 10);
-};
-
-// Helper function to get date from transaction (already in YYYY-MM-DD format)
-const getEditDate = (transaction: Transaction): string => {
-  return transaction.date;
-};
-
-// Helper function to convert Transaction to TransactionFormData
-const transactionToFormData = (
-  transaction: Transaction,
-): TransactionFormData => {
-  const base = {
-    amount: transaction.amount.toString(),
-    description: transaction.description || "",
-    date: getEditDate(transaction),
-    paymentSchedule: { mode: "none" } as PaymentSchedule,
-  };
-
-  if (transaction.type === "transfer") {
-    return {
-      type: "transfer",
-      ...base,
-      from_account: transaction.from_account,
-      to_account: transaction.to_account,
-    };
-  } else {
-    return {
-      type: transaction.type,
-      ...base,
-      account: transaction.account,
-      category: transaction.category,
-    };
-  }
-};
 
 // Helper function to initialize form data
 const initializeFormData = (
@@ -75,17 +37,7 @@ const initializeFormData = (
   if (mode === "edit" && initialTransaction) {
     return transactionToFormData(initialTransaction);
   }
-
-  // Default for add mode (or legacy mode)
-  return {
-    type: "purchase",
-    amount: "",
-    account: "",
-    category: "",
-    description: "",
-    date: getDefaultDate(),
-    paymentSchedule: { mode: "none" },
-  };
+  return getDefaultFormData();
 };
 
 export function TransactionForm({
@@ -95,14 +47,12 @@ export function TransactionForm({
   initialTransaction,
   onSuccess,
   onCancel,
-  onTransactionAdded,
 }: TransactionFormProps) {
   const [formData, setFormData] = useState<TransactionFormData>(() =>
     initializeFormData(mode, initialTransaction),
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
 
   // Update form data when initialTransaction changes (for edit mode)
   useEffect(() => {
@@ -114,7 +64,6 @@ export function TransactionForm({
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
-    setSuccess(false);
     setLoading(true);
 
     try {
@@ -124,15 +73,8 @@ export function TransactionForm({
         await apiService.updateTransaction(initialTransaction.id, formData);
       }
 
-      // Call the appropriate success callback
       if (onSuccess) {
         onSuccess();
-      } else if (onTransactionAdded) {
-        // Legacy support: show success message and reset form
-        setSuccess(true);
-        setFormData(initializeFormData("add", undefined));
-        onTransactionAdded();
-        setTimeout(() => setSuccess(false), 3000);
       }
     } catch (err) {
       setError(
@@ -284,9 +226,6 @@ export function TransactionForm({
       )}
 
       {error && <div className="error-message">{error}</div>}
-      {success && (
-        <div className="success-message">Transaction added successfully!</div>
-      )}
 
       <div className="form-actions">
         {onCancel && (

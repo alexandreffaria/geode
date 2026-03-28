@@ -1,9 +1,14 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
+	"time"
 
 	"github.com/meulindo/geode/backend/handlers"
 	"github.com/meulindo/geode/backend/middleware"
@@ -11,9 +16,21 @@ import (
 	"github.com/meulindo/geode/backend/storage"
 )
 
+// Handlers groups all HTTP handler types for route registration
+type Handlers struct {
+	accounts     *handlers.AccountHandler
+	categories   *handlers.CategoryHandler
+	transactions *handlers.TransactionHandler
+}
+
 func main() {
+	// Resolve data directory from env or default
+	dataDir := os.Getenv("DATA_DIR")
+	if dataDir == "" {
+		dataDir = filepath.Join(".", "data")
+	}
+
 	// Initialize storage
-	dataDir := filepath.Join(".", "data")
 	store, err := storage.NewJSONStorage(dataDir)
 	if err != nil {
 		log.Fatalf("Failed to initialize storage: %v", err)
@@ -25,33 +42,60 @@ func main() {
 	log.Println("Ledger service initialized")
 
 	// Initialize handlers
-	transactionHandler := handlers.NewTransactionHandler(ledger)
-	accountHandler := handlers.NewAccountHandler(ledger)
-	categoryHandler := handlers.NewCategoryHandler(ledger)
+	h := &Handlers{
+		transactions: handlers.NewTransactionHandler(ledger),
+		accounts:     handlers.NewAccountHandler(ledger),
+		categories:   handlers.NewCategoryHandler(ledger),
+	}
 
 	// Set up routes
 	mux := http.NewServeMux()
-	registerRoutes(mux, transactionHandler, accountHandler, categoryHandler)
+	registerRoutes(mux, h)
 
-	// Start server
-	port := ":8080"
-	log.Printf("Server starting on port %s", port)
-	logEndpoints()
-
-	if err := http.ListenAndServe(port, mux); err != nil {
-		log.Fatalf("Server failed to start: %v", err)
+	// Resolve port from env or default
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
 	}
+	addr := ":" + port
+
+	srv := &http.Server{
+		Addr:    addr,
+		Handler: mux,
+	}
+
+	// Start server in goroutine
+	go func() {
+		log.Printf("Server listening on %s", addr)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Server error: %v", err)
+		}
+	}()
+
+	// Wait for interrupt signal
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	log.Println("Server shutting down...")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatalf("Server forced to shutdown: %v", err)
+	}
+	log.Println("Server stopped")
 }
 
 // registerRoutes sets up all HTTP routes with appropriate middleware
-func registerRoutes(mux *http.ServeMux, transactionHandler *handlers.TransactionHandler, accountHandler *handlers.AccountHandler, categoryHandler *handlers.CategoryHandler) {
+func registerRoutes(mux *http.ServeMux, h *Handlers) {
 	// Transaction routes
 	mux.HandleFunc("/api/transactions", middleware.Chain(
 		func(w http.ResponseWriter, r *http.Request) {
 			if r.Method == http.MethodPost {
-				transactionHandler.CreateTransaction(w, r)
+				h.transactions.CreateTransaction(w, r)
 			} else if r.Method == http.MethodGet {
-				transactionHandler.GetAllTransactions(w, r)
+				h.transactions.GetAllTransactions(w, r)
 			} else {
 				handlers.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
 			}
@@ -68,11 +112,11 @@ func registerRoutes(mux *http.ServeMux, transactionHandler *handlers.Transaction
 				// Routes for specific transaction
 				switch r.Method {
 				case http.MethodGet:
-					transactionHandler.GetTransactionByID(w, r)
+					h.transactions.GetTransactionByID(w, r)
 				case http.MethodPut:
-					transactionHandler.UpdateTransaction(w, r)
+					h.transactions.UpdateTransaction(w, r)
 				case http.MethodDelete:
-					transactionHandler.DeleteTransaction(w, r)
+					h.transactions.DeleteTransaction(w, r)
 				default:
 					handlers.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
 				}
@@ -89,9 +133,9 @@ func registerRoutes(mux *http.ServeMux, transactionHandler *handlers.Transaction
 		func(w http.ResponseWriter, r *http.Request) {
 			switch r.Method {
 			case http.MethodGet:
-				accountHandler.GetAllAccounts(w, r)
+				h.accounts.GetAllAccounts(w, r)
 			case http.MethodPost:
-				accountHandler.CreateAccount(w, r)
+				h.accounts.CreateAccount(w, r)
 			default:
 				handlers.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
 			}
@@ -109,11 +153,11 @@ func registerRoutes(mux *http.ServeMux, transactionHandler *handlers.Transaction
 			}
 			switch r.Method {
 			case http.MethodGet:
-				accountHandler.GetAccountByName(w, r)
+				h.accounts.GetAccountByName(w, r)
 			case http.MethodPut:
-				accountHandler.UpdateAccount(w, r)
+				h.accounts.UpdateAccount(w, r)
 			case http.MethodDelete:
-				accountHandler.DeleteAccount(w, r)
+				h.accounts.DeleteAccount(w, r)
 			default:
 				handlers.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
 			}
@@ -127,9 +171,9 @@ func registerRoutes(mux *http.ServeMux, transactionHandler *handlers.Transaction
 		func(w http.ResponseWriter, r *http.Request) {
 			switch r.Method {
 			case http.MethodGet:
-				categoryHandler.GetAllCategories(w, r)
+				h.categories.GetAllCategories(w, r)
 			case http.MethodPost:
-				categoryHandler.CreateCategory(w, r)
+				h.categories.CreateCategory(w, r)
 			default:
 				handlers.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
 			}
@@ -147,11 +191,11 @@ func registerRoutes(mux *http.ServeMux, transactionHandler *handlers.Transaction
 			}
 			switch r.Method {
 			case http.MethodGet:
-				categoryHandler.GetCategoryByName(w, r)
+				h.categories.GetCategoryByName(w, r)
 			case http.MethodPut:
-				categoryHandler.UpdateCategory(w, r)
+				h.categories.UpdateCategory(w, r)
 			case http.MethodDelete:
-				categoryHandler.DeleteCategory(w, r)
+				h.categories.DeleteCategory(w, r)
 			default:
 				handlers.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
 			}
@@ -165,25 +209,4 @@ func registerRoutes(mux *http.ServeMux, transactionHandler *handlers.Transaction
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	})
-}
-
-// logEndpoints logs all available API endpoints
-func logEndpoints() {
-	log.Printf("API endpoints:")
-	log.Printf("  POST   /api/transactions         - Create transaction")
-	log.Printf("  GET    /api/transactions         - List all transactions")
-	log.Printf("  GET    /api/transactions/:id     - Get transaction by ID")
-	log.Printf("  PUT    /api/transactions/:id     - Update transaction")
-	log.Printf("  DELETE /api/transactions/:id     - Delete transaction")
-	log.Printf("  GET    /api/accounts             - List all accounts")
-	log.Printf("  POST   /api/accounts             - Create account")
-	log.Printf("  GET    /api/accounts/:name       - Get account by name")
-	log.Printf("  PUT    /api/accounts/:name       - Update account")
-	log.Printf("  DELETE /api/accounts/:name       - Delete account")
-	log.Printf("  GET    /api/categories           - List all categories")
-	log.Printf("  POST   /api/categories           - Create category")
-	log.Printf("  GET    /api/categories/:name     - Get category by name")
-	log.Printf("  PUT    /api/categories/:name     - Update category")
-	log.Printf("  DELETE /api/categories/:name     - Delete category")
-	log.Printf("  GET    /health                   - Health check")
 }
