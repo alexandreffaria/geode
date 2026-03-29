@@ -16,6 +16,9 @@ interface AppLayoutProps {
   mainAccountName?: string;
   onCloseModal: () => void;
   onModalSuccess: () => void;
+  /** Called after each successful save when "Create and start a new one" is active.
+   *  Refreshes the background transaction list without closing the modal. */
+  onTransactionCreated?: () => void;
   error: string | null;
   onRetry: () => void;
 }
@@ -28,6 +31,7 @@ export function AppLayout({
   mainAccountName,
   onCloseModal,
   onModalSuccess,
+  onTransactionCreated,
   error,
   onRetry,
 }: AppLayoutProps) {
@@ -167,6 +171,7 @@ export function AppLayout({
         mainAccountName={mainAccountName}
         onClose={onCloseModal}
         onSuccess={onModalSuccess}
+        onTransactionCreated={onTransactionCreated}
       />
     </div>
   );

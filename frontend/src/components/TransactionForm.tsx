@@ -43,6 +43,9 @@ interface TransactionFormProps {
   onSuccess?: () => void;
   onCancel?: () => void;
   onRecurringEditChoice?: (formData: TransactionFormData) => void;
+  /** Called after each successful save when "Create and start a new one" is active.
+   *  Does NOT close the modal — used to refresh the background transaction list. */
+  onTransactionCreated?: () => void;
 }
 
 // Type button config
@@ -79,6 +82,7 @@ export function TransactionForm({
   onSuccess,
   onCancel,
   onRecurringEditChoice,
+  onTransactionCreated,
 }: TransactionFormProps) {
   const [formData, setFormData] = useState<TransactionFormData>(() =>
     initializeFormData(mode, initialTransaction, mainAccountName),
@@ -182,12 +186,33 @@ export function TransactionForm({
       }
 
       if (mode === "add" && createAndStartNew) {
-        // Reset form to blank state and focus description — do NOT close modal
-        setFormData(getDefaultFormData(mainAccountName));
-        setFromCurrency("");
-        setToCurrency("");
+        // Partial reset: keep type/date/account/category, clear description & amount
+        setFormData((prev) => {
+          if (prev.type === "transfer") {
+            return {
+              type: "transfer",
+              amount: "",
+              from_account: prev.from_account,
+              to_account: prev.to_account,
+              description: "",
+              date: prev.date,
+              paymentSchedule: { mode: "none" },
+            };
+          }
+          return {
+            type: prev.type,
+            amount: "",
+            account: prev.account,
+            category: prev.category,
+            description: "",
+            date: prev.date,
+            paymentSchedule: { mode: "none" },
+          };
+        });
         setError(null);
         setShouldFocusDescription(true);
+        // Notify parent to refresh the background transaction list (without closing modal)
+        onTransactionCreated?.();
       } else if (onSuccess) {
         onSuccess();
       }

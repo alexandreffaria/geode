@@ -20,6 +20,9 @@ interface TransactionModalProps {
   mainAccountName?: string;
   onClose: () => void;
   onSuccess: () => void;
+  /** Called after each successful save when "Create and start a new one" is active.
+   *  Refreshes the background transaction list without closing the modal. */
+  onTransactionCreated?: () => void;
 }
 
 export function TransactionModal({
@@ -32,6 +35,7 @@ export function TransactionModal({
   mainAccountName,
   onClose,
   onSuccess,
+  onTransactionCreated,
 }: TransactionModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -190,6 +194,7 @@ export function TransactionModal({
               onSuccess={onSuccess}
               onCancel={onClose}
               onRecurringEditChoice={handleRecurringEditChoice}
+              onTransactionCreated={onTransactionCreated}
             />
           )}
         </div>

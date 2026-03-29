@@ -207,6 +207,7 @@ function App() {
               mainAccountName={mainAccount?.name}
               onCloseModal={closeModal}
               onModalSuccess={handleModalSuccess}
+              onTransactionCreated={refetchTransactions}
               error={error}
               onRetry={refetchData}
             />
