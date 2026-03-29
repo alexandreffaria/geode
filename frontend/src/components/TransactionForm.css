@@ -168,6 +168,34 @@
   cursor: not-allowed;
 }
 
+/* ── "Create and start a new one" checkbox ── */
+.create-new-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: #b0b0b0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.create-new-checkbox-label:has(.create-new-checkbox:disabled) {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.create-new-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #4a9eff;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.create-new-checkbox:disabled {
+  cursor: not-allowed;
+}
+
 /* ── Virtual transaction info banner ── */
 .virtual-info-banner {
   display: flex;

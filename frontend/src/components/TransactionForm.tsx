@@ -24,7 +24,10 @@ import {
 } from "../utils/transactionUtils";
 import { DateField } from "./form-fields/DateField";
 import { AmountField } from "./form-fields/AmountField";
-import { DescriptionAutocomplete } from "./form-fields/DescriptionAutocomplete";
+import {
+  DescriptionAutocomplete,
+  type DescriptionAutocompleteHandle,
+} from "./form-fields/DescriptionAutocomplete";
 import { AccountSelect } from "./form-fields/AccountSelect";
 import { CategorySelect } from "./form-fields/CategorySelect";
 import { PaymentScheduleSelector } from "./form-fields/PaymentScheduleSelector";
@@ -82,6 +85,9 @@ export function TransactionForm({
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [createAndStartNew, setCreateAndStartNew] = useState(false);
+  // Signals that the description field should be focused after the next render
+  const [shouldFocusDescription, setShouldFocusDescription] = useState(false);
 
   // Track currencies of the selected from/to accounts
   const [fromCurrency, setFromCurrency] = useState<string>("");
@@ -89,6 +95,8 @@ export function TransactionForm({
 
   // Ref for the amount input — used to shift focus after a description suggestion is selected
   const amountInputRef = useRef<HTMLInputElement | null>(null);
+  // Ref for the description autocomplete — used to focus it after form reset
+  const descriptionRef = useRef<DescriptionAutocompleteHandle | null>(null);
 
   // Derive deduplicated description suggestions from past transactions (memoized)
   const descriptionSuggestions = useMemo(
@@ -142,6 +150,14 @@ export function TransactionForm({
     }
   }, [mode, initialTransaction, accounts]);
 
+  // Focus the description field whenever shouldFocusDescription flips to true
+  useEffect(() => {
+    if (shouldFocusDescription) {
+      descriptionRef.current?.focus();
+      setShouldFocusDescription(false);
+    }
+  }, [shouldFocusDescription]);
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -165,7 +181,14 @@ export function TransactionForm({
         await apiService.updateTransaction(initialTransaction.id, formData);
       }
 
-      if (onSuccess) {
+      if (mode === "add" && createAndStartNew) {
+        // Reset form to blank state and focus description — do NOT close modal
+        setFormData(getDefaultFormData(mainAccountName));
+        setFromCurrency("");
+        setToCurrency("");
+        setError(null);
+        setShouldFocusDescription(true);
+      } else if (onSuccess) {
         onSuccess();
       }
     } catch (err) {
@@ -302,6 +325,7 @@ export function TransactionForm({
 
       {/* 2. Description (moved to top) */}
       <DescriptionAutocomplete
+        ref={descriptionRef}
         value={formData.description || ""}
         onChange={(description) => setFormData({ ...formData, description })}
         onSuggestionSelect={handleSuggestionSelect}
@@ -417,7 +441,21 @@ export function TransactionForm({
         />
       )}
 
-      {/* 8. Error + Actions */}
+      {/* 8. "Create and start a new one" checkbox (add mode only) */}
+      {mode === "add" && (
+        <label className="create-new-checkbox-label">
+          <input
+            type="checkbox"
+            className="create-new-checkbox"
+            checked={createAndStartNew}
+            onChange={(e) => setCreateAndStartNew(e.target.checked)}
+            disabled={loading}
+          />
+          Create and start a new one
+        </label>
+      )}
+
+      {/* 9. Error + Actions */}
       {error && <div className="error-message">{error}</div>}
 
       <div className="form-actions">

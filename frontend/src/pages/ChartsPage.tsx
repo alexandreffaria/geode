@@ -19,6 +19,9 @@ import {
   getLastDayOfMonth,
   getFirstDayOfYear,
   getLastDayOfYear,
+  isoToDisplay,
+  displayToIso,
+  isValidDisplayDate,
 } from "../utils/dateUtils";
 import "./ChartsPage.css";
 
@@ -432,19 +435,41 @@ export function ChartsPage({
           <label className="filter-label">Date Range</label>
           <div className="date-range-inputs">
             <input
-              type="date"
+              type="text"
+              inputMode="numeric"
               className="filter-input filter-input--date"
-              value={dateFilter.startDate}
-              onChange={(e) => setDateField("startDate", e.target.value)}
-              aria-label="Start date"
+              value={isoToDisplay(dateFilter.startDate)}
+              onChange={(e) => {
+                const display = e.target.value;
+                if (display === "") {
+                  setDateField("startDate", "");
+                } else if (isValidDisplayDate(display)) {
+                  setDateField("startDate", displayToIso(display));
+                }
+              }}
+              placeholder="DD/MM/YYYY"
+              pattern="\d{2}/\d{2}/\d{4}"
+              maxLength={10}
+              aria-label="Start date (DD/MM/YYYY)"
             />
             <span className="date-range-separator">→</span>
             <input
-              type="date"
+              type="text"
+              inputMode="numeric"
               className="filter-input filter-input--date"
-              value={dateFilter.endDate}
-              onChange={(e) => setDateField("endDate", e.target.value)}
-              aria-label="End date"
+              value={isoToDisplay(dateFilter.endDate)}
+              onChange={(e) => {
+                const display = e.target.value;
+                if (display === "") {
+                  setDateField("endDate", "");
+                } else if (isValidDisplayDate(display)) {
+                  setDateField("endDate", displayToIso(display));
+                }
+              }}
+              placeholder="DD/MM/YYYY"
+              pattern="\d{2}/\d{2}/\d{4}"
+              maxLength={10}
+              aria-label="End date (DD/MM/YYYY)"
             />
           </div>
           <div className="date-presets">

@@ -4,6 +4,7 @@ import type { Account, Category, ExchangeRate, Transaction } from "../types";
 import { CURRENCY_SYMBOLS } from "../constants";
 import { Avatar } from "../components/ui/Avatar";
 import { formatCurrency, resolveCategoryName } from "../utils/transactionUtils";
+import { formatDateDisplay } from "../utils/dateUtils";
 import "./Dashboard.css";
 
 interface DashboardProps {
@@ -51,11 +52,9 @@ function getDatePlusDays(days: number): string {
   return `${year}-${month}-${day}`;
 }
 
-/** Formats a date string "YYYY-MM-DD" as a short due date like "Mar 29". */
+/** Formats a date string "YYYY-MM-DD" as "DD/MM/YYYY" for display. */
 function formatDueDate(dateStr: string): string {
-  // Use T12:00:00 to avoid UTC midnight off-by-one in local timezones
-  const date = new Date(dateStr + "T12:00:00");
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return formatDateDisplay(dateStr);
 }
 
 interface BillRow {

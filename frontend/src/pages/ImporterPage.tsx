@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { isoToDisplay } from "../utils/dateUtils";
 import "./ImporterPage.css";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -640,7 +641,9 @@ export function ImporterPage() {
                         </span>
                       )}
                     </td>
-                    <td className="preview-td preview-td--date">{row.date}</td>
+                    <td className="preview-td preview-td--date">
+                      {isoToDisplay(row.date) || row.date}
+                    </td>
                     <td className="preview-td preview-td--desc">
                       {row.description || (
                         <span className="preview-empty">—</span>

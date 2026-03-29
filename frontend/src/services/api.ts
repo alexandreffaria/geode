@@ -201,12 +201,23 @@ class ApiService {
   }
 
   async createAccount(data: CreateAccountRequest): Promise<Account> {
+    // Map frontend camelCase field names to backend snake_case JSON field names
+    const payload: Record<string, unknown> = {
+      name: data.name,
+      initial_balance: data.initialBalance ?? 0,
+      currency: data.currency ?? "BRL",
+      image_url: data.imageURL ?? "",
+      gradient_start: data.gradientStart ?? "",
+      gradient_end: data.gradientEnd ?? "",
+      type: data.type ?? "checking",
+      credit_limit: data.creditLimit ?? null,
+    };
     const response = await fetch(`${API_BASE_URL}/accounts`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     });
     return this.handleResponse<Account>(response);
   }
@@ -215,6 +226,20 @@ class ApiService {
     name: string,
     data: UpdateAccountRequest,
   ): Promise<Account> {
+    // Map frontend camelCase field names to backend snake_case JSON field names
+    const payload: Record<string, unknown> = {};
+    if (data.name !== undefined) payload.name = data.name;
+    if (data.currency !== undefined) payload.currency = data.currency;
+    if (data.initialBalance !== undefined)
+      payload.initial_balance = data.initialBalance;
+    if (data.archived !== undefined) payload.archived = data.archived;
+    if (data.imageURL !== undefined) payload.image_url = data.imageURL;
+    if (data.gradientStart !== undefined)
+      payload.gradient_start = data.gradientStart;
+    if (data.gradientEnd !== undefined) payload.gradient_end = data.gradientEnd;
+    if (data.type !== undefined) payload.type = data.type;
+    if ("creditLimit" in data) payload.credit_limit = data.creditLimit ?? null;
+
     const response = await fetch(
       `${API_BASE_URL}/accounts/${encodeURIComponent(name)}`,
       {
@@ -222,7 +247,7 @@ class ApiService {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       },
     );
     return this.handleResponse<Account>(response);

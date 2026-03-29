@@ -1,4 +1,5 @@
 import { CURRENCY_SYMBOLS } from "../constants";
+import { formatDateDisplay } from "./dateUtils";
 import type {
   Category,
   Transaction,
@@ -33,16 +34,10 @@ export function formatBillMonth(month: string): string {
 }
 
 /**
- * Formats a date string (YYYY-MM-DD) for display.
- * Uses T12:00:00 to avoid UTC midnight off-by-one in local timezones.
+ * Formats a date string (YYYY-MM-DD) for display as DD/MM/YYYY.
  */
 export function formatDate(dateStr: string): string {
-  const date = new Date(dateStr + "T12:00:00");
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  return formatDateDisplay(dateStr);
 }
 
 /**

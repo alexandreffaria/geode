@@ -4,6 +4,8 @@ import {
   useEffect,
   useCallback,
   useMemo,
+  useImperativeHandle,
+  forwardRef,
   type RefObject,
 } from "react";
 import type { DescriptionSuggestion } from "../../utils/transactionUtils";
@@ -11,6 +13,10 @@ import "../../styles/combobox.css";
 import "./DescriptionAutocomplete.css";
 
 const MAX_SUGGESTIONS = 8;
+
+export interface DescriptionAutocompleteHandle {
+  focus: () => void;
+}
 
 interface DescriptionAutocompleteProps {
   value: string;
@@ -27,20 +33,30 @@ interface DescriptionAutocompleteProps {
  * type anything. Suggestions are shown only when the input is non-empty and matches exist.
  * On selection, focus moves to the amount field.
  */
-export function DescriptionAutocomplete({
-  value,
-  onChange,
-  onSuggestionSelect,
-  suggestions,
-  disabled = false,
-  amountInputRef,
-}: DescriptionAutocompleteProps) {
+export const DescriptionAutocomplete = forwardRef<
+  DescriptionAutocompleteHandle,
+  DescriptionAutocompleteProps
+>(function DescriptionAutocomplete(
+  {
+    value,
+    onChange,
+    onSuggestionSelect,
+    suggestions,
+    disabled = false,
+    amountInputRef,
+  },
+  ref,
+) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const listRef = useRef<HTMLUListElement | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    focus: () => inputRef.current?.focus(),
+  }));
 
   // Filter suggestions based on current input value (substring, case-insensitive)
   const filteredSuggestions = useMemo(
@@ -204,4 +220,4 @@ export function DescriptionAutocomplete({
       )}
     </div>
   );
-}
+});
