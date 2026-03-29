@@ -84,6 +84,31 @@ func (h *TransactionHandler) GetTransactionByID(w http.ResponseWriter, r *http.R
 	WriteJSON(w, http.StatusOK, transaction)
 }
 
+// DeleteRecurringGroup handles DELETE /api/transactions/group/:group_id
+// It deletes all transactions that share the given recurrence_group_id.
+func (h *TransactionHandler) DeleteRecurringGroup(w http.ResponseWriter, r *http.Request) {
+	const prefix = "/api/transactions/group/"
+	groupID := pathParam(r, prefix)
+	if groupID == "" {
+		WriteError(w, http.StatusBadRequest, "Group ID required")
+		return
+	}
+
+	err := h.ledger.DeleteRecurringGroup(groupID)
+	if err != nil {
+		log.Printf("Error deleting recurring group %s: %v", groupID, err)
+		if err.Error() == "no transactions found for group: "+groupID {
+			WriteError(w, http.StatusNotFound, err.Error())
+		} else {
+			WriteError(w, http.StatusInternalServerError, err.Error())
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+	log.Printf("Recurring group deleted: %s", groupID)
+}
+
 // UpdateRecurringGroup handles PUT /api/transactions/group/:group_id
 // It updates all transactions that share the given recurrence_group_id.
 func (h *TransactionHandler) UpdateRecurringGroup(w http.ResponseWriter, r *http.Request) {
@@ -172,6 +197,63 @@ func (h *TransactionHandler) DeleteTransaction(w http.ResponseWriter, r *http.Re
 	// Return 204 No Content on success
 	w.WriteHeader(http.StatusNoContent)
 	log.Printf("Transaction deleted: %s", id)
+}
+
+// DeleteFutureRecurring handles DELETE /api/transactions/:id/future
+// It deletes the target transaction and all future occurrences in the same recurring group.
+func (h *TransactionHandler) DeleteFutureRecurring(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path[len("/api/transactions/"):]
+	id := strings.TrimSuffix(path, "/future")
+	if id == "" || id == path {
+		WriteError(w, http.StatusBadRequest, "Transaction ID required")
+		return
+	}
+
+	err := h.ledger.DeleteRecurringFromDate(id)
+	if err != nil {
+		log.Printf("Error deleting future recurring from transaction %s: %v", id, err)
+		if errors.Is(err, services.ErrTransactionNotFound) {
+			WriteError(w, http.StatusNotFound, err.Error())
+		} else {
+			WriteError(w, http.StatusBadRequest, err.Error())
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+	log.Printf("Future recurring transactions deleted from: %s", id)
+}
+
+// UpdateFutureRecurring handles PUT /api/transactions/:id/future
+// It updates the target transaction and all future occurrences in the same recurring group.
+func (h *TransactionHandler) UpdateFutureRecurring(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path[len("/api/transactions/"):]
+	id := strings.TrimSuffix(path, "/future")
+	if id == "" || id == path {
+		WriteError(w, http.StatusBadRequest, "Transaction ID required")
+		return
+	}
+
+	var updates models.Transaction
+	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+		log.Printf("Error decoding transaction: %v", err)
+		WriteError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	results, err := h.ledger.UpdateRecurringFromDate(id, &updates)
+	if err != nil {
+		log.Printf("Error updating future recurring from transaction %s: %v", id, err)
+		if errors.Is(err, services.ErrTransactionNotFound) {
+			WriteError(w, http.StatusNotFound, err.Error())
+		} else {
+			WriteError(w, http.StatusBadRequest, err.Error())
+		}
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, results)
+	log.Printf("Future recurring transactions updated from %s (%d transactions)", id, len(results))
 }
 
 // RealizeTransaction handles POST /api/transactions/:id/realize

@@ -21,6 +21,9 @@ type Storage interface {
 	GetTransactionsByGroupID(groupID string) ([]*models.Transaction, error)
 	UpdateTransaction(transaction *models.Transaction) error
 	DeleteTransaction(id string) error
+	DeleteTransactionsByGroup(groupID string) error
+	DeleteTransactionsByGroupFromDate(groupID string, fromDate string) error
+	UpdateTransactionsByGroupFromDate(groupID string, fromDate string, updates *models.Transaction) ([]*models.Transaction, error)
 
 	// Account operations
 	SaveAccount(account *models.Account) error

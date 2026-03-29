@@ -1,3 +1,5 @@
+import type { RecurrenceUnit } from "../types";
+
 // Default gradient colors for account/category avatars
 // Currently duplicated in: AccountList.tsx, AccountManagementModal.tsx, AccountSelect.tsx, CategoryManagementModal.tsx, CategorySelect.tsx
 export const DEFAULT_GRADIENT_START = "#4a9eff";
@@ -32,7 +34,8 @@ export const PAYMENT_SCHEDULE_MODE_LABELS: Record<string, string> = {
 };
 
 export const RECURRING_PRESETS = [
-  { label: "Weekly", every: 1, unit: "week" as const },
-  { label: "Monthly", every: 1, unit: "month" as const },
-  { label: "Yearly", every: 12, unit: "month" as const },
-] as const;
+  { label: "Weekly", every: 1, unit: "week" as RecurrenceUnit },
+  { label: "Monthly", every: 1, unit: "month" as RecurrenceUnit },
+  { label: "Yearly", every: 12, unit: "month" as RecurrenceUnit },
+  { label: "Custom", every: 1, unit: "day" as RecurrenceUnit },
+];

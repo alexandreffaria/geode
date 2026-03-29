@@ -109,8 +109,9 @@ export function TransactionForm({
     ) {
       setFormData((prev) => {
         if (prev.type !== "transfer") return prev;
-        const { converted_amount: _removed, ...rest } = prev;
-        return rest as TransactionFormData;
+        const next = { ...prev };
+        delete (next as Partial<typeof next>).converted_amount;
+        return next as TransactionFormData;
       });
     }
   }, [isCrossCurrency]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -260,9 +261,9 @@ export function TransactionForm({
             🔮
           </span>
           <span>
-            This is a <strong>projected transaction</strong>. It does not affect
-            your account balance. Use the "👍 Realize" button in the list to
-            convert it to a real transaction.
+            This is a <strong>projected future transaction</strong>. Editing it
+            will update the projection without affecting your account balance.
+            Use the "Realize" button to mark it as completed.
           </span>
         </div>
       )}

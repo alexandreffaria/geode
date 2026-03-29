@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import type { Account, Category, ExchangeRate, Transaction } from "../types";
 import { CURRENCY_SYMBOLS } from "../constants";
@@ -41,7 +41,6 @@ export function Dashboard({
   onAddTransaction,
   onEditTransaction,
   onDeleteTransaction,
-  onRefreshData: _onRefreshData,
   onOpenBillModal,
 }: DashboardProps) {
   const navigate = useNavigate();
@@ -60,15 +59,18 @@ export function Dashboard({
     [activeAccounts],
   );
 
-  const monthPrefix = getCurrentMonthPrefix();
+  const monthPrefix = useMemo(() => getCurrentMonthPrefix(), []);
 
-  const navigateToTransactions = (accountName: string) => {
-    const params = new URLSearchParams({
-      account: accountName,
-      month: monthPrefix,
-    });
-    navigate(`/transactions?${params.toString()}`);
-  };
+  const navigateToTransactions = useCallback(
+    (accountName: string) => {
+      const params = new URLSearchParams({
+        account: accountName,
+        month: monthPrefix,
+      });
+      navigate(`/transactions?${params.toString()}`);
+    },
+    [navigate, monthPrefix],
+  );
 
   const currentMonthTransactions = useMemo(
     () => transactions.filter((t) => t.date.startsWith(monthPrefix)),
@@ -128,6 +130,13 @@ export function Dashboard({
         sum += account.balance / rate;
       }
     }
+    // DIAGNOSTIC LOG: confirm totalBalance sign before display
+    console.log(
+      "[DEBUG] totalBalance computed:",
+      sum,
+      "| isNegative:",
+      sum < 0,
+    );
     return sum;
   }, [exchangeRates, baseCurrency, activeAccounts]);
 
@@ -166,8 +175,10 @@ export function Dashboard({
           <div className="summary-card summary-card--total-balance">
             <div className="summary-card-label">Total Balance</div>
             {totalBalance !== null ? (
-              <div className="summary-card-amount amount-positive">
-                {formatCurrency(totalBalance, baseCurrency)}
+              <div
+                className={`summary-card-amount ${totalBalance >= 0 ? "amount-positive" : "amount-negative"}`}
+              >
+                {formatCurrency(totalBalance, baseCurrency, true)}
               </div>
             ) : (
               <div className="summary-card-amount summary-card-amount--unavailable">
@@ -226,8 +237,6 @@ export function Dashboard({
           <h2 className="section-title">Accounts</h2>
           <div className="accounts-grid">
             {checkingAccounts.map((account) => {
-              const symbol =
-                CURRENCY_SYMBOLS[account.currency] ?? account.currency;
               return (
                 <div
                   key={account.name}
@@ -266,7 +275,6 @@ export function Dashboard({
                     }`}
                   >
                     {formatCurrency(account.balance, account.currency)}
-                    <span className="account-balance-symbol">{symbol}</span>
                   </div>
                 </div>
               );

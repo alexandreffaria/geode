@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 
 export interface UseResourceResult<T> {
   data: T;
@@ -22,16 +22,25 @@ export function useResource<T>(
   const [data, setData] = useState<T>(initialData);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Track whether the initial fetch has completed so subsequent refetches
+  // don't set loading=true (which would unmount the whole page via App's
+  // early-return guard and lose UI state).
+  const initializedRef = useRef(false);
 
   const refetch = useCallback(async () => {
     setError(null);
-    setLoading(true);
+    // Only show the full-page loading spinner on the very first fetch.
+    // Subsequent refetches update data silently so the UI stays mounted.
+    if (!initializedRef.current) {
+      setLoading(true);
+    }
     try {
       const result = await fetchFn();
       setData(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
+      initializedRef.current = true;
       setLoading(false);
     }
   }, [fetchFn]);

@@ -3,6 +3,7 @@ import {
   useRef,
   useEffect,
   useCallback,
+  useMemo,
   type RefObject,
 } from "react";
 import type { DescriptionSuggestion } from "../../utils/transactionUtils";
@@ -42,14 +43,17 @@ export function DescriptionAutocomplete({
   const listRef = useRef<HTMLUListElement | null>(null);
 
   // Filter suggestions based on current input value (substring, case-insensitive)
-  const filteredSuggestions =
-    value.trim().length > 0
-      ? suggestions
-          .filter((s) =>
-            s.description.toLowerCase().includes(value.toLowerCase()),
-          )
-          .slice(0, MAX_SUGGESTIONS)
-      : [];
+  const filteredSuggestions = useMemo(
+    () =>
+      value.trim().length > 0
+        ? suggestions
+            .filter((s) =>
+              s.description.toLowerCase().includes(value.toLowerCase()),
+            )
+            .slice(0, MAX_SUGGESTIONS)
+        : [],
+    [value, suggestions],
+  );
 
   const shouldShowDropdown =
     isOpen && filteredSuggestions.length > 0 && !disabled;

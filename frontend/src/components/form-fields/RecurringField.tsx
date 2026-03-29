@@ -30,23 +30,25 @@ export function RecurringField({ every, unit, onChange }: RecurringFieldProps) {
         })}
       </div>
 
-      {/* Always-visible custom days input */}
-      <div className="recurring-custom">
-        <label className="recurring-custom-label">
-          Every
-          <input
-            type="number"
-            min={1}
-            value={unit === "day" ? every : ""}
-            onChange={(e) => {
-              const days = Math.max(1, parseInt(e.target.value) || 1);
-              onChange(days, "day");
-            }}
-            className={`recurring-custom-input${unit === "day" ? " active" : ""}`}
-          />
-          day(s)
-        </label>
-      </div>
+      {/* Shown only when "Custom" preset is selected */}
+      {unit === "day" && (
+        <div className="recurring-custom">
+          <label className="recurring-custom-label">
+            Every
+            <input
+              type="number"
+              min={1}
+              value={every}
+              onChange={(e) => {
+                const days = Math.max(1, parseInt(e.target.value) || 1);
+                onChange(days, "day");
+              }}
+              className="recurring-custom-input active"
+            />
+            day(s)
+          </label>
+        </div>
+      )}
     </div>
   );
 }

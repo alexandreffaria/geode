@@ -1,0 +1,157 @@
+/* ============================================================
+   RecurringDeleteDialog — component-specific styles
+   Shared modal shell classes (.modal-overlay, .modal-container,
+   .modal-header, .modal-title, .modal-close-button, .modal-body)
+   are defined in src/styles/modal-base.css (imported via index.css).
+   ============================================================ */
+
+/* Narrow the container for a compact confirmation dialog */
+.delete-dialog-container {
+  max-width: 420px;
+}
+
+/* Inner layout */
+.delete-dialog {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 8px 0 4px;
+}
+
+.delete-dialog__icon {
+  font-size: 2.5rem;
+  line-height: 1;
+  margin-bottom: 12px;
+}
+
+.delete-dialog__description {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  color: var(--text-primary, #e0e0e0);
+  word-break: break-word;
+}
+
+.delete-dialog__question {
+  margin: 0 0 24px;
+  font-size: 0.95rem;
+  color: var(--text-secondary, #b0b0b0);
+  line-height: 1.5;
+  max-width: 360px;
+}
+
+.delete-dialog__error {
+  width: 100%;
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+/* Action buttons — stacked vertically, full-width */
+.delete-dialog__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 320px;
+  margin-bottom: 20px;
+}
+
+.delete-dialog__btn {
+  width: 100%;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    opacity 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.delete-dialog__btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.delete-dialog__btn:focus {
+  outline: 2px solid var(--accent-blue, #4a9eff);
+  outline-offset: 2px;
+}
+
+.delete-dialog__btn-label {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.delete-dialog__btn-hint {
+  font-size: 0.78rem;
+  font-weight: 400;
+  opacity: 0.8;
+}
+
+/* "Only this transaction" — primary destructive */
+.delete-dialog__btn--single {
+  background: var(--accent-red, #e05252);
+  color: #fff;
+}
+
+.delete-dialog__btn--single:hover:not(:disabled) {
+  background: var(--accent-red-hover, #c94444);
+}
+
+/* "This and all future" — medium destructive */
+.delete-dialog__btn--future {
+  background: var(--bg-tertiary, #2a2a2a);
+  color: var(--accent-red, #e05252);
+  border: 1px solid var(--accent-red, #e05252);
+}
+
+.delete-dialog__btn--future:hover:not(:disabled) {
+  background: rgba(224, 82, 82, 0.12);
+}
+
+/* "All in series" — most destructive, outlined */
+.delete-dialog__btn--all {
+  background: var(--bg-tertiary, #2a2a2a);
+  color: var(--text-secondary, #b0b0b0);
+  border: 1px solid var(--border-color, #3a3a3a);
+}
+
+.delete-dialog__btn--all:hover:not(:disabled) {
+  background: var(--bg-hover, #333333);
+  color: var(--accent-red, #e05252);
+  border-color: var(--accent-red, #e05252);
+}
+
+/* Cancel link-style button */
+.delete-dialog__cancel {
+  background: none;
+  border: none;
+  color: var(--text-secondary, #b0b0b0);
+  font-size: 0.875rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.2s;
+}
+
+.delete-dialog__cancel:hover:not(:disabled) {
+  color: var(--text-primary, #e0e0e0);
+}
+
+.delete-dialog__cancel:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.delete-dialog__cancel:focus {
+  outline: 2px solid var(--accent-blue, #4a9eff);
+  outline-offset: 2px;
+  border-radius: 3px;
+}

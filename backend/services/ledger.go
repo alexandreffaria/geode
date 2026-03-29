@@ -301,6 +301,7 @@ func (s *LedgerService) UpdateTransaction(updated *models.Transaction) (*models.
 
 	// Preserve fields from the original that should never be overwritten by the request body
 	updated.RecurrenceGroupID = original.RecurrenceGroupID
+	updated.IsVirtual = original.IsVirtual
 
 	// Reverse the original transaction's effect on account balances
 	if err := s.reverseAccountBalances(original); err != nil {
@@ -417,6 +418,115 @@ func (s *LedgerService) UpdateRecurringGroup(groupID string, updated *models.Tra
 	}
 
 	return results, nil
+}
+
+// DeleteRecurringGroup deletes all transactions in a recurring group, reversing balance
+// effects for any non-virtual transactions in the group.
+func (s *LedgerService) DeleteRecurringGroup(groupID string) error {
+	group, err := s.storage.GetTransactionsByGroupID(groupID)
+	if err != nil {
+		return err
+	}
+	if len(group) == 0 {
+		return errors.New("no transactions found for group: " + groupID)
+	}
+
+	// Reverse balance effects for all non-virtual, non-unpaid transactions
+	for _, t := range group {
+		if err := s.reverseAccountBalances(t); err != nil {
+			return fmt.Errorf("failed to reverse balances for transaction %s: %w", t.ID, err)
+		}
+	}
+
+	return s.storage.DeleteTransactionsByGroup(groupID)
+}
+
+// DeleteRecurringFromDate deletes the target transaction and all future occurrences
+// in the same recurring group (same recurrence_group_id, date >= target date).
+// Balance effects are reversed for each deleted transaction.
+func (s *LedgerService) DeleteRecurringFromDate(id string) error {
+	target, err := s.storage.GetTransactionByID(id)
+	if err != nil {
+		return err
+	}
+	if target == nil {
+		return ErrTransactionNotFound
+	}
+	if target.RecurrenceGroupID == nil {
+		return errors.New("transaction does not belong to a recurring group")
+	}
+
+	groupID := *target.RecurrenceGroupID
+	fromDate := target.Date.Time.Format("2006-01-02")
+
+	// Fetch all group members to reverse their balance effects
+	group, err := s.storage.GetTransactionsByGroupID(groupID)
+	if err != nil {
+		return err
+	}
+
+	for _, t := range group {
+		if t.Date.Time.Format("2006-01-02") >= fromDate {
+			if err := s.reverseAccountBalances(t); err != nil {
+				return fmt.Errorf("failed to reverse balances for transaction %s: %w", t.ID, err)
+			}
+		}
+	}
+
+	return s.storage.DeleteTransactionsByGroupFromDate(groupID, fromDate)
+}
+
+// UpdateRecurringFromDate updates the target transaction and all future occurrences
+// in the same recurring group (same recurrence_group_id, date >= target date).
+// Per-transaction identity fields (ID, Date, IsVirtual, RecurrenceGroupID) are preserved.
+// Returns the list of updated transactions.
+func (s *LedgerService) UpdateRecurringFromDate(id string, updates *models.Transaction) ([]*models.Transaction, error) {
+	if err := updates.Validate(); err != nil {
+		return nil, err
+	}
+
+	target, err := s.storage.GetTransactionByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if target == nil {
+		return nil, ErrTransactionNotFound
+	}
+	if target.RecurrenceGroupID == nil {
+		return nil, errors.New("transaction does not belong to a recurring group")
+	}
+
+	groupID := *target.RecurrenceGroupID
+	fromDate := target.Date.Time.Format("2006-01-02")
+
+	// Fetch all affected group members to reverse their balance effects
+	group, err := s.storage.GetTransactionsByGroupID(groupID)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, t := range group {
+		if t.Date.Time.Format("2006-01-02") >= fromDate {
+			if err := s.reverseAccountBalances(t); err != nil {
+				return nil, fmt.Errorf("failed to reverse balances for transaction %s: %w", t.ID, err)
+			}
+		}
+	}
+
+	// Persist the field updates in storage
+	updated, err := s.storage.UpdateTransactionsByGroupFromDate(groupID, fromDate, updates)
+	if err != nil {
+		return nil, err
+	}
+
+	// Apply new balance effects for each updated transaction
+	for _, t := range updated {
+		if err := s.updateAccountBalances(t); err != nil {
+			log.Printf("WARN: failed to apply balances for transaction %s after group-from-date update: %v", t.ID, err)
+		}
+	}
+
+	return updated, nil
 }
 
 // DeleteTransaction deletes a transaction and reverses its effects on account balances

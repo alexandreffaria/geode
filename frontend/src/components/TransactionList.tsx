@@ -189,16 +189,22 @@ export function TransactionList({
                         })()}
                     </td>
                     <td className="actions-cell">
-                      {transaction.is_virtual ? (
-                        <>
-                          <button
-                            className="delete-button"
-                            onClick={() => onDeleteTransaction(transaction)}
-                            aria-label={`Delete projected transaction: ${transaction.description || "No description"}`}
-                          >
-                            🗑️ Delete
-                          </button>
-                          {onRealizeTransaction && (
+                      <button
+                        className="edit-button"
+                        onClick={() => onEditTransaction(transaction)}
+                        aria-label={`Edit transaction: ${transaction.description || "No description"}`}
+                      >
+                        ✏️ Edit
+                      </button>
+                      <button
+                        className="delete-button"
+                        onClick={() => onDeleteTransaction(transaction)}
+                        aria-label={`Delete transaction: ${transaction.description || "No description"}`}
+                      >
+                        🗑️ Delete
+                      </button>
+                      {transaction.is_virtual
+                        ? onRealizeTransaction && (
                             <button
                               className="realize-button"
                               onClick={() => onRealizeTransaction(transaction)}
@@ -207,25 +213,8 @@ export function TransactionList({
                             >
                               👎
                             </button>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            className="edit-button"
-                            onClick={() => onEditTransaction(transaction)}
-                            aria-label={`Edit transaction: ${transaction.description || "No description"}`}
-                          >
-                            ✏️ Edit
-                          </button>
-                          <button
-                            className="delete-button"
-                            onClick={() => onDeleteTransaction(transaction)}
-                            aria-label={`Delete transaction: ${transaction.description || "No description"}`}
-                          >
-                            🗑️ Delete
-                          </button>
-                          {onUnrealizeTransaction && (
+                          )
+                        : onUnrealizeTransaction && (
                             <button
                               className="realize-button"
                               onClick={() =>
@@ -237,8 +226,6 @@ export function TransactionList({
                               👍
                             </button>
                           )}
-                        </>
-                      )}
                     </td>
                   </tr>
                 );

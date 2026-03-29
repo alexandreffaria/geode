@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useMemo } from "react";
 import { useCombobox } from "../../hooks/useCombobox";
 import { Avatar } from "../ui/Avatar";
 import type { Account } from "../../types";
@@ -79,10 +79,14 @@ export function AccountSelect({
   }, [value, setInputValue]);
 
   // Filtered accounts based on current inputValue
-  const displayedAccounts = activeAccounts.filter((a) => {
-    if (!inputValue) return true;
-    return a.name.toLowerCase().includes(inputValue.toLowerCase());
-  });
+  const displayedAccounts = useMemo(
+    () =>
+      activeAccounts.filter((a) => {
+        if (!inputValue) return true;
+        return a.name.toLowerCase().includes(inputValue.toLowerCase());
+      }),
+    [activeAccounts, inputValue],
+  );
 
   // Custom handleInputChange: also clears selection when input is cleared
   const handleInputChange = useCallback(

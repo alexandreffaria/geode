@@ -116,7 +116,7 @@ func registerRoutes(mux *http.ServeMux, h *Handlers) {
 		mw...,
 	))
 
-	// PUT /api/transactions/group/:group_id — must be registered BEFORE /api/transactions/
+	// PUT/DELETE /api/transactions/group/:group_id — must be registered BEFORE /api/transactions/
 	// so that Go's prefix-matching ServeMux routes it to the more specific handler.
 	mux.HandleFunc("/api/transactions/group/", middleware.Chain(
 		func(w http.ResponseWriter, r *http.Request) {
@@ -125,9 +125,12 @@ func registerRoutes(mux *http.ServeMux, h *Handlers) {
 				handlers.WriteError(w, http.StatusBadRequest, "Group ID required")
 				return
 			}
-			if r.Method == http.MethodPut {
+			switch r.Method {
+			case http.MethodPut:
 				h.transactions.UpdateRecurringGroup(w, r)
-			} else {
+			case http.MethodDelete:
+				h.transactions.DeleteRecurringGroup(w, r)
+			default:
 				handlers.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
 			}
 		},
@@ -139,6 +142,24 @@ func registerRoutes(mux *http.ServeMux, h *Handlers) {
 			path := r.URL.Path[len("/api/transactions/"):]
 			if path == "" {
 				handlers.WriteError(w, http.StatusBadRequest, "Transaction ID required")
+				return
+			}
+
+			// Route: DELETE/PUT /api/transactions/:id/future
+			if strings.HasSuffix(path, "/future") {
+				id := strings.TrimSuffix(path, "/future")
+				if id == "" {
+					handlers.WriteError(w, http.StatusBadRequest, "Transaction ID required")
+					return
+				}
+				switch r.Method {
+				case http.MethodDelete:
+					h.transactions.DeleteFutureRecurring(w, r)
+				case http.MethodPut:
+					h.transactions.UpdateFutureRecurring(w, r)
+				default:
+					handlers.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
+				}
 				return
 			}
 

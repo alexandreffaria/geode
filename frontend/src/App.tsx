@@ -11,6 +11,10 @@ import { Dashboard } from "./pages/Dashboard";
 import { TransactionsPage } from "./pages/TransactionsPage";
 import { ChartsPage } from "./pages/ChartsPage";
 import { CreditCardBillModal } from "./components/CreditCardBillModal";
+import {
+  RecurringDeleteDialog,
+  type DeleteScope,
+} from "./components/RecurringDeleteDialog";
 
 function App() {
   // ── Data hooks ──────────────────────────────────────────────────────────────
@@ -76,24 +80,73 @@ function App() {
     closeModal();
   }, [refetchData, closeModal]);
 
-  // ── Delete transaction ──────────────────────────────────────────────────────
-  const handleDeleteTransaction = useCallback(
-    async (transaction: Transaction) => {
-      if (
-        !window.confirm(
-          "Are you sure you want to delete this transaction? This will reverse its effects on account balances.",
-        )
-      ) {
-        return;
-      }
+  // ── Delete transaction dialog state ────────────────────────────────────────
+  const [deleteDialogState, setDeleteDialogState] = useState<{
+    isOpen: boolean;
+    transaction: Transaction | null;
+    loading: boolean;
+    error: string | null;
+  }>({
+    isOpen: false,
+    transaction: null,
+    loading: false,
+    error: null,
+  });
+
+  const handleDeleteTransaction = useCallback((transaction: Transaction) => {
+    setDeleteDialogState({
+      isOpen: true,
+      transaction,
+      loading: false,
+      error: null,
+    });
+  }, []);
+
+  const handleDeleteDialogCancel = useCallback(() => {
+    setDeleteDialogState({
+      isOpen: false,
+      transaction: null,
+      loading: false,
+      error: null,
+    });
+  }, []);
+
+  const handleDeleteDialogConfirm = useCallback(
+    async (scope: DeleteScope) => {
+      const { transaction } = deleteDialogState;
+      if (!transaction) return;
+
+      setDeleteDialogState((prev) => ({ ...prev, loading: true, error: null }));
+
       try {
-        await apiService.deleteTransaction(transaction.id);
+        if (scope === "single") {
+          await apiService.deleteTransaction(transaction.id);
+        } else if (scope === "future") {
+          await apiService.deleteFutureRecurring(transaction.id);
+        } else {
+          // scope === "all"
+          await apiService.deleteRecurringGroup(
+            transaction.recurrence_group_id!,
+          );
+        }
+        // Close dialog first, then refetch so the UI updates cleanly
+        setDeleteDialogState({
+          isOpen: false,
+          transaction: null,
+          loading: false,
+          error: null,
+        });
         await refetchData();
       } catch (err) {
-        console.error("Failed to delete transaction:", err);
+        setDeleteDialogState((prev) => ({
+          ...prev,
+          loading: false,
+          error:
+            err instanceof Error ? err.message : "Failed to delete transaction",
+        }));
       }
     },
-    [refetchData],
+    [deleteDialogState, refetchData],
   );
 
   // ── Realize transaction (virtual → real) ────────────────────────────────────
@@ -226,6 +279,18 @@ function App() {
           isOpen={true}
           onClose={() => setBillsAccount(null)}
           onPaymentMade={refetchData}
+        />
+      )}
+
+      {/* Global delete confirmation dialog */}
+      {deleteDialogState.transaction && (
+        <RecurringDeleteDialog
+          transaction={deleteDialogState.transaction}
+          isOpen={deleteDialogState.isOpen}
+          loading={deleteDialogState.loading}
+          error={deleteDialogState.error}
+          onConfirm={handleDeleteDialogConfirm}
+          onCancel={handleDeleteDialogCancel}
         />
       )}
     </BrowserRouter>

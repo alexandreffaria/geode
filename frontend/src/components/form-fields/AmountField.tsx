@@ -1,6 +1,5 @@
 import {
   useState,
-  useEffect,
   useCallback,
   type RefObject,
   type KeyboardEvent,
@@ -56,21 +55,24 @@ export function AmountField({
   label = "Amount",
   id = "amount",
 }: AmountFieldProps) {
-  // Internal state: integer number of cents
-  const [cents, setCents] = useState<number>(() => parseToCents(value));
+  // State holds [currentCents, lastSeenExternalValue] as a tuple.
+  // Storing the last-seen prop value in state (not a ref) lets us detect
+  // external prop changes during render without effects or refs — the
+  // React-approved "getDerivedStateFromProps" pattern for hooks.
+  const [state, setState] = useState<[number, string]>(() => [
+    parseToCents(value),
+    value,
+  ]);
 
-  // Sync internal state when the parent resets or changes the value from
-  // outside (e.g. switching to edit mode with an existing transaction).
-  useEffect(() => {
+  let cents = state[0];
+
+  // If the external value prop changed, reset internal cents to match it.
+  // This runs during render (no effect needed) and triggers one extra render.
+  if (value !== state[1]) {
     const incoming = parseToCents(value);
-    // Only update if the parent value differs from what we'd produce ourselves.
-    // This prevents overwriting the user's in-progress input on every render.
-    setCents((prev) => {
-      const currentFormatted = formatCents(prev);
-      const incomingFormatted = formatCents(incoming);
-      return currentFormatted === incomingFormatted ? prev : incoming;
-    });
-  }, [value]);
+    cents = incoming;
+    setState([incoming, value]);
+  }
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLInputElement>) => {
@@ -78,24 +80,19 @@ export function AmountField({
 
       if (key === "Backspace") {
         e.preventDefault();
-        setCents((prev) => {
-          const next = Math.floor(prev / 10);
-          const formatted = formatCents(next);
-          onChange(formatted);
-          return next;
-        });
+        // Read current cents from state[0] via closure over `state`
+        const next = Math.floor(state[0] / 10);
+        setState([next, value]);
+        onChange(formatCents(next));
         return;
       }
 
       if (key >= "0" && key <= "9") {
         e.preventDefault();
         const digit = parseInt(key, 10);
-        setCents((prev) => {
-          const next = Math.min(prev * 10 + digit, MAX_CENTS);
-          const formatted = formatCents(next);
-          onChange(formatted);
-          return next;
-        });
+        const next = Math.min(state[0] * 10 + digit, MAX_CENTS);
+        setState([next, value]);
+        onChange(formatCents(next));
         return;
       }
 
@@ -114,7 +111,7 @@ export function AmountField({
         e.preventDefault();
       }
     },
-    [onChange],
+    [onChange, state, value],
   );
 
   const displayValue = formatCents(cents);

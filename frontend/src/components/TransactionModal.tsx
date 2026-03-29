@@ -57,8 +57,8 @@ export function TransactionModal({
     setDialogError(null);
   };
 
-  // Called when the user picks "Just this one" or "All in series"
-  const handleRecurringConfirm = async (scope: "single" | "all") => {
+  // Called when the user picks a scope for the recurring edit
+  const handleRecurringConfirm = async (scope: "single" | "future" | "all") => {
     if (!pendingFormData || !transaction) return;
 
     setDialogLoading(true);
@@ -67,6 +67,8 @@ export function TransactionModal({
     try {
       if (scope === "single") {
         await apiService.updateTransaction(transaction.id, pendingFormData);
+      } else if (scope === "future") {
+        await apiService.updateFutureRecurring(transaction.id, pendingFormData);
       } else {
         // scope === "all"
         const groupId = transaction.recurrence_group_id!;
@@ -149,6 +151,14 @@ export function TransactionModal({
                   disabled={dialogLoading}
                 >
                   {dialogLoading ? "Saving…" : "Just this one"}
+                </button>
+                <button
+                  type="button"
+                  className="recurring-dialog__btn recurring-dialog__btn--secondary"
+                  onClick={() => handleRecurringConfirm("future")}
+                  disabled={dialogLoading}
+                >
+                  {dialogLoading ? "Saving…" : "This and all future"}
                 </button>
                 <button
                   type="button"

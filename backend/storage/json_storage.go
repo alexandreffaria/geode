@@ -195,6 +195,90 @@ func (s *JSONStorage) DeleteTransaction(id string) error {
 	return s.writeTransactions(transactions)
 }
 
+// DeleteTransactionsByGroup deletes all transactions belonging to a recurrence group.
+func (s *JSONStorage) DeleteTransactionsByGroup(groupID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	transactions, err := s.readTransactions()
+	if err != nil {
+		return err
+	}
+
+	filtered := transactions[:0]
+	for _, t := range transactions {
+		if !(t.RecurrenceGroupID != nil && *t.RecurrenceGroupID == groupID) {
+			filtered = append(filtered, t)
+		}
+	}
+
+	return s.writeTransactions(filtered)
+}
+
+// DeleteTransactionsByGroupFromDate deletes all transactions in a recurrence group
+// whose date is >= fromDate (YYYY-MM-DD lexicographic comparison).
+func (s *JSONStorage) DeleteTransactionsByGroupFromDate(groupID string, fromDate string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	transactions, err := s.readTransactions()
+	if err != nil {
+		return err
+	}
+
+	filtered := transactions[:0]
+	for _, t := range transactions {
+		inGroup := t.RecurrenceGroupID != nil && *t.RecurrenceGroupID == groupID
+		onOrAfter := t.Date.Time.Format("2006-01-02") >= fromDate
+		if !(inGroup && onOrAfter) {
+			filtered = append(filtered, t)
+		}
+	}
+
+	return s.writeTransactions(filtered)
+}
+
+// UpdateTransactionsByGroupFromDate updates all transactions in a recurrence group
+// whose date is >= fromDate. Fields updated: Amount, Description, Type, Account,
+// Category, FromAccount, ToAccount, RecurrenceMonths, RecurrenceUnit, Paid,
+// CreditCardBillMonth. Preserved per-transaction: ID, Date, IsVirtual, RecurrenceGroupID.
+// Returns the updated transactions.
+func (s *JSONStorage) UpdateTransactionsByGroupFromDate(groupID string, fromDate string, updates *models.Transaction) ([]*models.Transaction, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	transactions, err := s.readTransactions()
+	if err != nil {
+		return nil, err
+	}
+
+	var updated []*models.Transaction
+	for _, t := range transactions {
+		inGroup := t.RecurrenceGroupID != nil && *t.RecurrenceGroupID == groupID
+		onOrAfter := t.Date.Time.Format("2006-01-02") >= fromDate
+		if inGroup && onOrAfter {
+			t.Amount = updates.Amount
+			t.Description = updates.Description
+			t.Type = updates.Type
+			t.Account = updates.Account
+			t.Category = updates.Category
+			t.FromAccount = updates.FromAccount
+			t.ToAccount = updates.ToAccount
+			t.RecurrenceMonths = updates.RecurrenceMonths
+			t.RecurrenceUnit = updates.RecurrenceUnit
+			t.Paid = updates.Paid
+			t.CreditCardBillMonth = updates.CreditCardBillMonth
+			updated = append(updated, t)
+		}
+	}
+
+	if err := s.writeTransactions(transactions); err != nil {
+		return nil, err
+	}
+
+	return updated, nil
+}
+
 // SaveAccount saves a new account to the JSON file
 func (s *JSONStorage) SaveAccount(account *models.Account) error {
 	s.mu.Lock()

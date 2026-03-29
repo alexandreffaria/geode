@@ -81,6 +81,10 @@ class ApiService {
       }));
       throw new Error(error.error);
     }
+    // 204 No Content — return without calling .json() (empty body would throw)
+    if (response.status === 204) {
+      return undefined as T;
+    }
     return response.json() as Promise<T>;
   }
 
@@ -144,6 +148,34 @@ class ApiService {
       method: "DELETE",
     });
     return this.handleResponse<void>(response);
+  }
+
+  async deleteRecurringGroup(groupId: string): Promise<void> {
+    const response = await fetch(
+      `${API_BASE_URL}/transactions/group/${groupId}`,
+      { method: "DELETE" },
+    );
+    return this.handleResponse<void>(response);
+  }
+
+  async deleteFutureRecurring(id: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/transactions/${id}/future`, {
+      method: "DELETE",
+    });
+    return this.handleResponse<void>(response);
+  }
+
+  async updateFutureRecurring(
+    id: string,
+    data: TransactionFormData,
+  ): Promise<Transaction[]> {
+    const payload = buildTransactionPayload(data);
+    const response = await fetch(`${API_BASE_URL}/transactions/${id}/future`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return this.handleResponse<Transaction[]>(response);
   }
 
   async realizeTransaction(id: string): Promise<Transaction> {

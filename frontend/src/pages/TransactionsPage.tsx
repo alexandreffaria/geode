@@ -220,14 +220,24 @@ export function TransactionsPage({
   }, [showVirtual]);
 
   // Compose a FilterState object for the filter logic (no setState needed)
-  const filters: FilterState = {
-    startDate,
-    endDate,
-    selectedAccount,
-    selectedCategory,
-    searchQuery,
-    showVirtual,
-  };
+  const filters: FilterState = useMemo(
+    () => ({
+      startDate,
+      endDate,
+      selectedAccount,
+      selectedCategory,
+      searchQuery,
+      showVirtual,
+    }),
+    [
+      startDate,
+      endDate,
+      selectedAccount,
+      selectedCategory,
+      searchQuery,
+      showVirtual,
+    ],
+  );
 
   const setFilter = useCallback(
     <K extends keyof FilterState>(key: K, value: FilterState[K]) => {
