@@ -17,6 +17,9 @@ import (
 // ImportTransactions handles POST /api/transactions/import.
 // It is a method on TransactionHandler so it can access the ledger service
 // via the same pattern used by all other transaction handlers.
+//
+// If an account or category referenced in the CSV does not exist in storage,
+// it is automatically created before the transaction is imported.
 func (h *TransactionHandler) ImportTransactions(w http.ResponseWriter, r *http.Request) {
 	// 1. Parse multipart form (10 MB limit)
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
@@ -79,8 +82,34 @@ func (h *TransactionHandler) ImportTransactions(w http.ResponseWriter, r *http.R
 	for i, row := range csvRows {
 		rowNum := i + 2 // 1-based row number; +1 for header, +1 for 1-based index
 
+		// 5a. Auto-create any missing accounts referenced by this row.
+		// This runs before buildTransaction so the lookup maps are always populated.
+		if ensureErr := ensureRowAccounts(h, row, accountMap); ensureErr != nil {
+			log.Printf("Import row %d: failed to ensure accounts: %v", rowNum, ensureErr)
+			result.Failed++
+			result.Rows = append(result.Rows, models.ImportRowResult{
+				Row:     rowNum,
+				Success: false,
+				Error:   ensureErr.Error(),
+			})
+			continue
+		}
+
+		// 5b. Auto-create any missing categories referenced by this row.
+		if ensureErr := ensureRowCategories(h, row, categoryMap); ensureErr != nil {
+			log.Printf("Import row %d: failed to ensure categories: %v", rowNum, ensureErr)
+			result.Failed++
+			result.Rows = append(result.Rows, models.ImportRowResult{
+				Row:     rowNum,
+				Success: false,
+				Error:   ensureErr.Error(),
+			})
+			continue
+		}
+
 		tx, validationErr := buildTransaction(row, accountMap, categoryMap)
 		if validationErr != nil {
+			log.Printf("Import row %d: validation failed: %v", rowNum, validationErr)
 			result.Failed++
 			result.Rows = append(result.Rows, models.ImportRowResult{
 				Row:     rowNum,
@@ -112,6 +141,104 @@ func (h *TransactionHandler) ImportTransactions(w http.ResponseWriter, r *http.R
 
 	log.Printf("CSV import complete: %d total, %d imported, %d failed", result.Total, result.Imported, result.Failed)
 	WriteJSON(w, http.StatusOK, result)
+}
+
+// ensureRowAccounts checks each account name referenced by a CSV row and creates
+// any that do not yet exist in storage. The accountMap is updated in-place so that
+// subsequent calls within the same import request see the newly created accounts.
+//
+// For purchase/earning rows the "account" field is checked.
+// For transfer rows both "from_account" and "to_account" are checked.
+func ensureRowAccounts(h *TransactionHandler, row models.CsvTransactionRow, accountMap map[string]*models.Account) error {
+	txType := strings.ToLower(strings.TrimSpace(row.Type))
+
+	switch txType {
+	case string(models.TransactionTypePurchase), string(models.TransactionTypeEarning):
+		if row.Account != "" {
+			if err := ensureAccount(h, row.Account, accountMap); err != nil {
+				return err
+			}
+		}
+	case string(models.TransactionTypeTransfer):
+		if row.FromAccount != "" {
+			if err := ensureAccount(h, row.FromAccount, accountMap); err != nil {
+				return err
+			}
+		}
+		if row.ToAccount != "" {
+			if err := ensureAccount(h, row.ToAccount, accountMap); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// ensureAccount looks up an account by name (case-insensitive) in accountMap.
+// If not found, it creates a new checking account with zero initial balance,
+// saves it to storage, and inserts it into accountMap.
+func ensureAccount(h *TransactionHandler, name string, accountMap map[string]*models.Account) error {
+	key := strings.ToLower(name)
+	if _, exists := accountMap[key]; exists {
+		return nil // already known
+	}
+
+	// Create a new account with sensible defaults
+	acct, err := h.ledger.CreateAccount(name, 0, "", "", "", "", "", nil)
+	if err != nil {
+		return fmt.Errorf("auto-create account %q: %w", name, err)
+	}
+
+	accountMap[key] = acct
+	log.Printf("Import: auto-created account %q", name)
+	return nil
+}
+
+// ensureRowCategories checks each category name referenced by a CSV row and creates
+// any that do not yet exist in storage. The categoryMap is updated in-place.
+//
+// Only purchase and earning rows carry a category; transfer rows do not.
+// The category type is inferred from the transaction type:
+//   - "earning" → category type "income"
+//   - "purchase" → category type "expense"
+func ensureRowCategories(h *TransactionHandler, row models.CsvTransactionRow, categoryMap map[string]*models.Category) error {
+	txType := strings.ToLower(strings.TrimSpace(row.Type))
+
+	switch txType {
+	case string(models.TransactionTypePurchase):
+		if row.Category != "" {
+			if err := ensureCategory(h, row.Category, "expense", categoryMap); err != nil {
+				return err
+			}
+		}
+	case string(models.TransactionTypeEarning):
+		if row.Category != "" {
+			if err := ensureCategory(h, row.Category, "income", categoryMap); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// ensureCategory looks up a category by name (case-insensitive) in categoryMap.
+// If not found, it creates a new category with the given type (e.g. "expense" or "income"),
+// saves it to storage, and inserts it into categoryMap.
+func ensureCategory(h *TransactionHandler, name string, categoryType string, categoryMap map[string]*models.Category) error {
+	key := strings.ToLower(name)
+	if _, exists := categoryMap[key]; exists {
+		return nil // already known
+	}
+
+	// Create a new top-level category with no parent
+	cat, err := h.ledger.CreateCategory(name, categoryType, nil, "", "", "")
+	if err != nil {
+		return fmt.Errorf("auto-create category %q: %w", name, err)
+	}
+
+	categoryMap[key] = cat
+	log.Printf("Import: auto-created category %q (type: %s)", name, categoryType)
+	return nil
 }
 
 // parseImportCSV reads all data rows from a CSV reader.
