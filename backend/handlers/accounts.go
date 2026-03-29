@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/meulindo/geode/backend/models"
 	"github.com/meulindo/geode/backend/services"
@@ -59,12 +60,14 @@ func (h *AccountHandler) GetAccountByName(w http.ResponseWriter, r *http.Request
 
 // createAccountRequest is the request body for POST /api/accounts
 type createAccountRequest struct {
-	Name           string  `json:"name"`
-	InitialBalance float64 `json:"initialBalance"`
-	Currency       string  `json:"currency"`
-	ImageURL       string  `json:"imageURL"`
-	GradientStart  string  `json:"gradientStart"`
-	GradientEnd    string  `json:"gradientEnd"`
+	Name           string   `json:"name"`
+	InitialBalance float64  `json:"initialBalance"`
+	Currency       string   `json:"currency"`
+	ImageURL       string   `json:"imageURL"`
+	GradientStart  string   `json:"gradientStart"`
+	GradientEnd    string   `json:"gradientEnd"`
+	Type           string   `json:"type"`         // "checking" | "credit_card"
+	CreditLimit    *float64 `json:"credit_limit"` // optional, for credit_card accounts
 }
 
 // CreateAccount handles POST /api/accounts
@@ -81,7 +84,7 @@ func (h *AccountHandler) CreateAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	account, err := h.ledger.CreateAccount(req.Name, req.InitialBalance, req.Currency, req.ImageURL, req.GradientStart, req.GradientEnd)
+	account, err := h.ledger.CreateAccount(req.Name, req.InitialBalance, req.Currency, req.ImageURL, req.GradientStart, req.GradientEnd, req.Type, req.CreditLimit)
 	if err != nil {
 		log.Printf("Error creating account: %v", err)
 		if err.Error() == "account already exists" {
@@ -93,7 +96,7 @@ func (h *AccountHandler) CreateAccount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	WriteJSON(w, http.StatusCreated, account)
-	log.Printf("Account created: %s (currency: %s, initialBalance: %.2f)", account.Name, account.Currency, account.InitialBalance)
+	log.Printf("Account created: %s (type: %s, currency: %s, initialBalance: %.2f)", account.Name, account.Type, account.Currency, account.InitialBalance)
 }
 
 // UpdateAccount handles PUT /api/accounts/:name
@@ -148,4 +151,61 @@ func (h *AccountHandler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusNoContent)
 	log.Printf("Account deleted: %s", name)
+}
+
+// GetCreditCardBills handles GET /api/accounts/:name/credit-card-bills
+func (h *AccountHandler) GetCreditCardBills(w http.ResponseWriter, r *http.Request) {
+	// Extract account name from path: /api/accounts/:name/credit-card-bills
+	path := r.URL.Path[len("/api/accounts/"):]
+	name := strings.TrimSuffix(path, "/credit-card-bills")
+	if name == "" {
+		WriteError(w, http.StatusBadRequest, "Account name required")
+		return
+	}
+
+	summaries, err := h.ledger.GetCreditCardBills(name)
+	if err != nil {
+		log.Printf("Error getting credit card bills for %s: %v", name, err)
+		if err.Error() == "account not found" {
+			WriteError(w, http.StatusNotFound, err.Error())
+		} else {
+			WriteError(w, http.StatusInternalServerError, "Internal server error")
+		}
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, summaries)
+	log.Printf("Retrieved %d credit card bill months for account: %s", len(summaries), name)
+}
+
+// PayBill handles POST /api/accounts/:name/pay-bill
+func (h *AccountHandler) PayBill(w http.ResponseWriter, r *http.Request) {
+	// Extract account name from path: /api/accounts/:name/pay-bill
+	path := r.URL.Path[len("/api/accounts/"):]
+	name := strings.TrimSuffix(path, "/pay-bill")
+	if name == "" {
+		WriteError(w, http.StatusBadRequest, "Account name required")
+		return
+	}
+
+	var req services.PayBillRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("Error decoding pay bill request: %v", err)
+		WriteError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	transaction, err := h.ledger.PayCreditCardBill(name, &req)
+	if err != nil {
+		log.Printf("Error paying credit card bill for %s: %v", name, err)
+		if err.Error() == "credit card account not found" || err.Error() == "account not found" {
+			WriteError(w, http.StatusNotFound, err.Error())
+		} else {
+			WriteError(w, http.StatusBadRequest, err.Error())
+		}
+		return
+	}
+
+	WriteJSON(w, http.StatusCreated, transaction)
+	log.Printf("Credit card bill payment created for account %s: amount=%.2f, month=%s", name, transaction.Amount, *transaction.CreditCardBillMonth)
 }

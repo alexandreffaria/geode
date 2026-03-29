@@ -1,11 +1,14 @@
 import type { CreateAccountRequest } from "../../types";
-import { CURRENCIES } from "../../constants";
+import { CURRENCIES, ACCOUNT_TYPES } from "../../constants";
 
 interface AddAccountFormProps {
   form: CreateAccountRequest;
   error: string | null;
   saving: boolean;
-  onChange: (field: keyof CreateAccountRequest, value: string | number) => void;
+  onChange: (
+    field: keyof CreateAccountRequest,
+    value: string | number | null,
+  ) => void;
   onSubmit: (e: React.FormEvent) => void;
 }
 
@@ -16,6 +19,8 @@ export function AddAccountForm({
   onChange,
   onSubmit,
 }: AddAccountFormProps) {
+  const isCreditCard = form.type === ACCOUNT_TYPES.CREDIT_CARD;
+
   return (
     <section className="am-section">
       <h3 className="am-section-title">Add New Account</h3>
@@ -27,6 +32,29 @@ export function AddAccountForm({
       )}
 
       <form className="add-account-form" onSubmit={onSubmit} noValidate>
+        {/* Account type toggle */}
+        <div className="form-group form-group--full">
+          <label>Account Type</label>
+          <div className="account-type-toggle">
+            <button
+              type="button"
+              className={`account-type-btn${!isCreditCard ? " account-type-btn--active" : ""}`}
+              onClick={() => onChange("type", ACCOUNT_TYPES.CHECKING)}
+              disabled={saving}
+            >
+              🏦 Checking Account
+            </button>
+            <button
+              type="button"
+              className={`account-type-btn${isCreditCard ? " account-type-btn--active" : ""}`}
+              onClick={() => onChange("type", ACCOUNT_TYPES.CREDIT_CARD)}
+              disabled={saving}
+            >
+              💳 Credit Card
+            </button>
+          </div>
+        </div>
+
         <div className="add-form-grid">
           <div className="form-group">
             <label htmlFor="add-name">
@@ -61,7 +89,9 @@ export function AddAccountForm({
           </div>
 
           <div className="form-group">
-            <label htmlFor="add-balance">Initial Balance</label>
+            <label htmlFor="add-balance">
+              {isCreditCard ? "Current Balance (debt)" : "Initial Balance"}
+            </label>
             <input
               id="add-balance"
               type="number"
@@ -73,6 +103,33 @@ export function AddAccountForm({
               disabled={saving}
             />
           </div>
+
+          {isCreditCard && (
+            <div className="form-group">
+              <label htmlFor="add-credit-limit">
+                Credit Limit <span className="optional">(optional)</span>
+              </label>
+              <input
+                id="add-credit-limit"
+                type="number"
+                step="0.01"
+                min="0"
+                value={
+                  form.creditLimit != null ? (form.creditLimit as number) : ""
+                }
+                onChange={(e) =>
+                  onChange(
+                    "creditLimit",
+                    e.target.value === ""
+                      ? null
+                      : parseFloat(e.target.value) || 0,
+                  )
+                }
+                disabled={saving}
+                placeholder="e.g. 5000"
+              />
+            </div>
+          )}
 
           <div className="form-group">
             <label htmlFor="add-image">

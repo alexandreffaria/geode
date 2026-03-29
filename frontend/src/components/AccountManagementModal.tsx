@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useModalAccessibility } from "../hooks/useModalAccessibility";
-import { DEFAULT_GRADIENT_END, DEFAULT_GRADIENT_START } from "../constants";
+import {
+  DEFAULT_GRADIENT_END,
+  DEFAULT_GRADIENT_START,
+  ACCOUNT_TYPES,
+} from "../constants";
 import type {
   Account,
   CreateAccountRequest,
@@ -21,6 +25,7 @@ interface AccountManagementModalProps {
   onCreateAccount: (data: CreateAccountRequest) => Promise<void>;
   onUpdateAccount: (name: string, data: UpdateAccountRequest) => Promise<void>;
   onDeleteAccount: (name: string) => Promise<void>;
+  onViewBills?: (account: Account) => void;
 }
 
 const DEFAULT_ADD_FORM: CreateAccountRequest = {
@@ -30,6 +35,8 @@ const DEFAULT_ADD_FORM: CreateAccountRequest = {
   imageURL: "",
   gradientStart: DEFAULT_GRADIENT_START,
   gradientEnd: DEFAULT_GRADIENT_END,
+  type: ACCOUNT_TYPES.CHECKING,
+  creditLimit: null,
 };
 
 function buildEditFormState(account: Account): AccountEditFormState {
@@ -41,6 +48,9 @@ function buildEditFormState(account: Account): AccountEditFormState {
     gradientStart: account.gradient_start || DEFAULT_GRADIENT_START,
     gradientEnd: account.gradient_end || DEFAULT_GRADIENT_END,
     archived: account.archived,
+    type: account.type ?? ACCOUNT_TYPES.CHECKING,
+    creditLimit:
+      account.credit_limit != null ? account.credit_limit.toString() : "",
   };
 }
 
@@ -51,6 +61,7 @@ export function AccountManagementModal({
   onCreateAccount,
   onUpdateAccount,
   onDeleteAccount,
+  onViewBills,
 }: AccountManagementModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -117,6 +128,16 @@ export function AccountManagementModal({
       return;
     }
 
+    // Parse credit limit
+    let parsedCreditLimit: number | null = null;
+    if (
+      editForm.type === ACCOUNT_TYPES.CREDIT_CARD &&
+      editForm.creditLimit !== ""
+    ) {
+      const cl = parseFloat(editForm.creditLimit);
+      if (!isNaN(cl)) parsedCreditLimit = cl;
+    }
+
     setEditSaving(true);
     setEditError(null);
     try {
@@ -128,6 +149,11 @@ export function AccountManagementModal({
         imageURL: editForm.imageURL,
         gradientStart: editForm.gradientStart,
         gradientEnd: editForm.gradientEnd,
+        type: editForm.type,
+        creditLimit:
+          editForm.type === ACCOUNT_TYPES.CREDIT_CARD
+            ? parsedCreditLimit
+            : null,
       });
       setEditingAccount(null);
       setEditForm(null);
@@ -157,7 +183,7 @@ export function AccountManagementModal({
   // --- Add handlers ---
   const handleAddFormChange = (
     field: keyof CreateAccountRequest,
-    value: string | number,
+    value: string | number | null,
   ) => {
     setAddForm((prev) => ({ ...prev, [field]: value }));
   };
@@ -241,6 +267,7 @@ export function AccountManagementModal({
                         isDeleting={deletingAccount === account.name}
                         onEdit={handleStartEdit}
                         onDelete={handleDelete}
+                        onViewBills={onViewBills}
                       />
                     )}
                   </li>

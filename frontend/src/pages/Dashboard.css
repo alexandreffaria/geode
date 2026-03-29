@@ -1,0 +1,311 @@
+.dashboard {
+  padding: 32px;
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+}
+
+/* ── Header ── */
+.dashboard-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.dashboard-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dashboard-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.dashboard-subtitle {
+  font-size: 0.95rem;
+  color: var(--text-tertiary);
+  margin: 0;
+}
+
+/* ── Add Transaction Button ── */
+.add-transaction-button {
+  padding: 12px 22px;
+  background: linear-gradient(135deg, var(--accent-blue) 0%, #3a7ed8 100%);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.add-transaction-button:hover {
+  background: linear-gradient(135deg, #5aa9ff 0%, #4a8ee8 100%);
+  box-shadow: 0 6px 16px rgba(74, 158, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+.add-transaction-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(74, 158, 255, 0.3);
+}
+
+.button-icon {
+  font-size: 1.3rem;
+  line-height: 1;
+  font-weight: 700;
+}
+
+/* ── Sections ── */
+.dashboard-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.section-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.section-link {
+  font-size: 0.88rem;
+  color: var(--accent-blue);
+  text-decoration: none;
+  font-weight: 500;
+  transition: opacity 0.15s;
+}
+
+.section-link:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+/* ── Monthly Summary Cards ── */
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.summary-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color 0.15s;
+}
+
+.summary-card--income {
+  border-left: 3px solid var(--accent-green);
+}
+
+.summary-card--expenses {
+  border-left: 3px solid var(--accent-red);
+}
+
+.summary-card--net {
+  border-left: 3px solid var(--accent-blue);
+}
+
+.summary-card--credit-debt {
+  border-left: 3px solid var(--accent-red);
+  background: rgba(255, 107, 107, 0.05);
+}
+
+.summary-card-label {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.summary-card-amount {
+  font-size: 1.6rem;
+  font-weight: 700;
+  font-family: "Courier New", monospace;
+  line-height: 1;
+}
+
+/* ── Account Cards ── */
+.accounts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.account-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.account-card:hover {
+  border-color: #4a4a4a;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.account-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.account-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.account-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.account-currency-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+  padding: 1px 5px;
+  display: inline-block;
+  letter-spacing: 0.04em;
+}
+
+.account-balance {
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-family: "Courier New", monospace;
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.account-balance-symbol {
+  font-size: 0.85rem;
+  font-weight: 500;
+  display: none; /* symbol already included in formatCurrency */
+}
+
+/* ── Credit card account card ── */
+.account-card--credit-dashboard {
+  border-color: rgba(74, 158, 255, 0.3);
+}
+
+.account-card--credit-dashboard:hover {
+  border-color: var(--accent-blue);
+  box-shadow: 0 4px 12px rgba(74, 158, 255, 0.2);
+}
+
+/* ── Credit limit progress bar ── */
+.account-credit-limit-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.account-credit-limit-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  font-family: "Courier New", monospace;
+}
+
+.account-credit-limit-track {
+  height: 4px;
+  background: var(--bg-tertiary);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.account-credit-limit-fill {
+  height: 100%;
+  background: var(--accent-red);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+/* ── View bills button (dashboard) ── */
+.account-view-bills-btn-dashboard {
+  background: none;
+  border: 1px solid var(--accent-blue);
+  border-radius: 6px;
+  color: var(--accent-blue);
+  font-size: 0.8rem;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+  text-align: center;
+}
+
+.account-view-bills-btn-dashboard:hover {
+  background: rgba(74, 158, 255, 0.12);
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .summary-cards {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .dashboard {
+    padding: 20px 16px;
+    gap: 28px;
+  }
+
+  .dashboard-title {
+    font-size: 1.6rem;
+  }
+
+  .summary-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-card-amount {
+    font-size: 1.3rem;
+  }
+}

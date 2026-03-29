@@ -336,6 +336,74 @@
   width: 100%;
 }
 
+/* ---- Account type toggle ---- */
+.form-group--full {
+  grid-column: 1 / -1;
+}
+
+.account-type-toggle {
+  display: flex;
+  gap: 8px;
+}
+
+.account-type-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border-color, #3a3a3a);
+  background: var(--bg-primary, #121212);
+  color: var(--text-secondary, #b0b0b0);
+  transition: all 0.2s;
+}
+
+.account-type-btn:hover:not(:disabled) {
+  border-color: var(--accent-blue, #4a9eff);
+  color: var(--text-primary, #e0e0e0);
+}
+
+.account-type-btn--active {
+  background: var(--accent-blue, #4a9eff);
+  border-color: var(--accent-blue, #4a9eff);
+  color: #fff;
+}
+
+.account-type-btn--active:hover:not(:disabled) {
+  background: #3a8eef;
+  border-color: #3a8eef;
+  color: #fff;
+}
+
+/* ---- Credit card badge ---- */
+.account-item-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.credit-card-badge {
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.credit-limit-badge {
+  background: rgba(74, 158, 255, 0.12);
+  border: 1px solid rgba(74, 158, 255, 0.3);
+  color: var(--accent-blue, #4a9eff);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: "Courier New", monospace;
+}
+
+/* ---- View bills button ---- */
+.icon-btn--bills:hover {
+  color: var(--accent-blue, #4a9eff);
+}
+
 /* ============================================================
    Responsive
    ============================================================ */
@@ -348,5 +416,9 @@
   .account-item-row {
     gap: 10px;
     padding: 10px 12px;
+  }
+
+  .account-type-toggle {
+    flex-direction: column;
   }
 }

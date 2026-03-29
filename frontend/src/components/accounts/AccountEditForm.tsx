@@ -1,5 +1,5 @@
 import type { Account } from "../../types";
-import { CURRENCIES } from "../../constants";
+import { CURRENCIES, ACCOUNT_TYPES } from "../../constants";
 import { Avatar } from "../ui/Avatar";
 
 export interface AccountEditFormState {
@@ -10,6 +10,8 @@ export interface AccountEditFormState {
   gradientStart: string;
   gradientEnd: string;
   archived: boolean;
+  type: "checking" | "credit_card";
+  creditLimit: string; // stored as string for input, parsed on save
 }
 
 interface AccountEditFormProps {
@@ -34,6 +36,8 @@ export function AccountEditForm({
   onSave,
   onCancel,
 }: AccountEditFormProps) {
+  const isCreditCard = form.type === ACCOUNT_TYPES.CREDIT_CARD;
+
   return (
     <div className="edit-form" role="group" aria-label={`Edit ${account.name}`}>
       <div className="edit-form-header">
@@ -53,6 +57,29 @@ export function AccountEditForm({
           {error}
         </div>
       )}
+
+      {/* Account type toggle */}
+      <div className="form-group form-group--full">
+        <label>Account Type</label>
+        <div className="account-type-toggle">
+          <button
+            type="button"
+            className={`account-type-btn${!isCreditCard ? " account-type-btn--active" : ""}`}
+            onClick={() => onChange("type", ACCOUNT_TYPES.CHECKING)}
+            disabled={saving}
+          >
+            🏦 Checking Account
+          </button>
+          <button
+            type="button"
+            className={`account-type-btn${isCreditCard ? " account-type-btn--active" : ""}`}
+            onClick={() => onChange("type", ACCOUNT_TYPES.CREDIT_CARD)}
+            disabled={saving}
+          >
+            💳 Credit Card
+          </button>
+        </div>
+      </div>
 
       <div className="edit-form-grid">
         <div className="form-group">
@@ -85,7 +112,7 @@ export function AccountEditForm({
 
         <div className="form-group">
           <label htmlFor={`edit-balance-${account.name}`}>
-            Initial Balance
+            {isCreditCard ? "Current Balance (debt)" : "Initial Balance"}
           </label>
           <input
             id={`edit-balance-${account.name}`}
@@ -96,6 +123,24 @@ export function AccountEditForm({
             disabled={saving}
           />
         </div>
+
+        {isCreditCard && (
+          <div className="form-group">
+            <label htmlFor={`edit-credit-limit-${account.name}`}>
+              Credit Limit <span className="optional">(optional)</span>
+            </label>
+            <input
+              id={`edit-credit-limit-${account.name}`}
+              type="number"
+              step="0.01"
+              min="0"
+              value={form.creditLimit}
+              onChange={(e) => onChange("creditLimit", e.target.value)}
+              disabled={saving}
+              placeholder="e.g. 5000"
+            />
+          </div>
+        )}
 
         <div className="form-group">
           <label htmlFor={`edit-image-${account.name}`}>Image URL</label>

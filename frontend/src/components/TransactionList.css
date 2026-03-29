@@ -63,6 +63,23 @@
   white-space: nowrap;
 }
 
+/* ---- Pending row ---- */
+.transaction-row--pending {
+  opacity: 0.75;
+}
+
+.transaction-row--pending td {
+  border-bottom-style: dashed;
+}
+
+/* ---- Type cell (badge + status badge) ---- */
+.type-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+
 .type-badge {
   display: inline-block;
   padding: 4px 10px;
@@ -87,11 +104,58 @@
   color: #6bb6ff;
 }
 
+/* ---- Status badges ---- */
+.status-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.status-badge--pending {
+  background: rgba(255, 193, 7, 0.15);
+  border: 1px solid rgba(255, 193, 7, 0.5);
+  color: #ffc107;
+}
+
+.status-badge--paid {
+  background: rgba(107, 255, 107, 0.12);
+  border: 1px solid rgba(107, 255, 107, 0.4);
+  color: #6bff6b;
+}
+
+/* ---- Description cell ---- */
 .description-cell {
   max-width: 250px;
+}
+
+.description-content {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow: hidden;
+}
+
+.description-content > span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.bill-month-label {
+  font-size: 0.75rem;
+  color: var(--accent-blue, #4a9eff);
+  white-space: nowrap;
+}
+
+/* ---- Pending amount ---- */
+.amount--pending {
+  opacity: 0.6;
+  text-decoration: line-through;
+  text-decoration-style: dashed;
 }
 
 .account-cell {

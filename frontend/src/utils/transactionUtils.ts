@@ -2,6 +2,34 @@ import { CURRENCY_SYMBOLS } from "../constants";
 import type { Transaction, TransactionFormData } from "../types";
 
 /**
+ * Checks if a transaction is pending (unpaid credit card transaction).
+ * Returns true only when paid === false (not null, not undefined).
+ */
+export function isTransactionPending(transaction: Transaction): boolean {
+  return transaction.paid === false;
+}
+
+/**
+ * Formats a bill month string "YYYY-MM" to a readable format like "March 2026".
+ */
+export function formatBillMonth(month: string): string {
+  // month is "YYYY-MM"
+  const [year, mon] = month.split("-");
+  const date = new Date(parseInt(year), parseInt(mon) - 1, 1);
+  return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+}
+
+/**
+ * Returns the bill month for a transaction.
+ * Uses credit_card_bill_month if set, otherwise null.
+ */
+export function getTransactionBillMonth(
+  transaction: Transaction,
+): string | null {
+  return transaction.credit_card_bill_month ?? null;
+}
+
+/**
  * Formats a date string (YYYY-MM-DD) for display.
  * Uses T12:00:00 to avoid UTC midnight off-by-one in local timezones.
  */
@@ -79,7 +107,13 @@ export function transactionToFormData(
     amount: String(transaction.amount),
     description: transaction.description,
     date: transaction.date,
-    paymentSchedule: { mode: "none" as const },
+    paymentSchedule: transaction.recurrence_months
+      ? {
+          mode: "recurring" as const,
+          every: transaction.recurrence_months,
+          unit: transaction.recurrence_unit ?? ("month" as const),
+        }
+      : { mode: "none" as const },
   };
 
   if (transaction.type === "transfer") {

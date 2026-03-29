@@ -1,0 +1,205 @@
+/* ============================================================
+   Credit Card Bill Modal
+   Extends the shared modal-overlay / modal-container / modal-header
+   classes defined in modal-base.css.
+   ============================================================ */
+
+.cc-bill-modal {
+  max-width: 640px;
+}
+
+/* ---- Loading / error / empty states ---- */
+.cc-bill-loading {
+  color: var(--text-tertiary, #888);
+  text-align: center;
+  padding: 32px;
+  font-style: italic;
+}
+
+.cc-bill-empty {
+  color: var(--text-tertiary, #888);
+  text-align: center;
+  padding: 32px;
+  font-style: italic;
+}
+
+.cc-bill-error {
+  background: rgba(255, 107, 107, 0.12);
+  border: 1px solid var(--accent-red, #ff6b6b);
+  color: var(--accent-red, #ff6b6b);
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+}
+
+/* ---- Bill list ---- */
+.cc-bill-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ---- Bill item ---- */
+.cc-bill-item {
+  background: var(--bg-tertiary, #2a2a2a);
+  border: 1px solid var(--border-color, #3a3a3a);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color 0.2s;
+}
+
+.cc-bill-item:hover {
+  border-color: var(--accent-blue, #4a9eff);
+}
+
+/* ---- Bill item header ---- */
+.cc-bill-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.cc-bill-month {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary, #e0e0e0);
+}
+
+.cc-bill-paid-badge {
+  background: rgba(107, 255, 107, 0.12);
+  border: 1px solid var(--accent-green, #6bff6b);
+  color: var(--accent-green, #6bff6b);
+  border-radius: 12px;
+  padding: 3px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.cc-bill-pay-btn {
+  padding: 6px 16px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+/* ---- Amount rows ---- */
+.cc-bill-amounts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--bg-secondary, #1e1e1e);
+  border-radius: 6px;
+}
+
+.cc-bill-amount-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cc-bill-amount-label {
+  color: var(--text-secondary, #b0b0b0);
+  font-size: 0.85rem;
+}
+
+.cc-bill-amount-value {
+  font-family: "Courier New", monospace;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary, #e0e0e0);
+}
+
+/* ---- Inline payment form ---- */
+.cc-bill-pay-form {
+  border-top: 1px solid var(--border-color, #3a3a3a);
+  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cc-bill-pay-form-title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary, #b0b0b0);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cc-bill-pay-form-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.cc-bill-pay-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cc-bill-pay-form .form-group label {
+  color: var(--text-secondary, #b0b0b0);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.cc-bill-pay-form .form-group input[type="number"],
+.cc-bill-pay-form .form-group select {
+  background: var(--bg-primary, #121212);
+  border: 1px solid var(--border-color, #3a3a3a);
+  border-radius: 6px;
+  color: var(--text-primary, #e0e0e0);
+  font-size: 0.9rem;
+  padding: 8px 10px;
+  transition: border-color 0.2s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cc-bill-pay-form .form-group input[type="number"]:focus,
+.cc-bill-pay-form .form-group select:focus {
+  border-color: var(--accent-blue, #4a9eff);
+  outline: none;
+}
+
+.cc-bill-pay-form .form-group input:disabled,
+.cc-bill-pay-form .form-group select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cc-bill-pay-form-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.cc-bill-no-accounts {
+  color: var(--text-tertiary, #888);
+  font-size: 0.85rem;
+  font-style: italic;
+  margin: 0;
+}
+
+/* ============================================================
+   Responsive
+   ============================================================ */
+@media (max-width: 600px) {
+  .cc-bill-pay-form-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .cc-bill-item-header {
+    flex-wrap: wrap;
+  }
+}

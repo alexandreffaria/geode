@@ -8,6 +8,7 @@ import type {
   Category,
   CreateCategoryRequest,
   UpdateCategoryRequest,
+  CreditCardBillSummary,
 } from "../types";
 
 const API_BASE_URL = "/api";
@@ -30,7 +31,8 @@ function buildTransactionPayload(
   if (data.paymentSchedule.mode === "installment") {
     payload.installment_total = data.paymentSchedule.months;
   } else if (data.paymentSchedule.mode === "recurring") {
-    payload.recurrence_months = data.paymentSchedule.every_months;
+    payload.recurrence_months = data.paymentSchedule.every;
+    payload.recurrence_unit = data.paymentSchedule.unit;
   }
 
   // Add type-specific fields
@@ -193,6 +195,37 @@ class ApiService {
       },
     );
     return this.handleVoidResponse(response);
+  }
+
+  async getCreditCardBills(
+    accountName: string,
+  ): Promise<CreditCardBillSummary[]> {
+    const response = await fetch(
+      `${API_BASE_URL}/accounts/${encodeURIComponent(accountName)}/credit-card-bills`,
+    );
+    return this.handleResponse<CreditCardBillSummary[]>(response);
+  }
+
+  async payCreditCardBill(
+    accountName: string,
+    payload: {
+      from_account: string;
+      amount: number;
+      bill_month: string;
+      description?: string;
+    },
+  ): Promise<Transaction> {
+    const response = await fetch(
+      `${API_BASE_URL}/accounts/${encodeURIComponent(accountName)}/pay-bill`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      },
+    );
+    return this.handleResponse<Transaction>(response);
   }
 }
 

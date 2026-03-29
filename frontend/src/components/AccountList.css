@@ -111,6 +111,53 @@
   font-family: "Courier New", monospace;
 }
 
+/* ---- Credit card account card ---- */
+.account-card--credit {
+  border-color: rgba(74, 158, 255, 0.3);
+}
+
+.account-card--credit:hover {
+  border-color: var(--accent-blue);
+  box-shadow: 0 4px 12px rgba(74, 158, 255, 0.25);
+}
+
+.account-card-type-icon {
+  font-size: 0.85rem;
+  margin-left: 2px;
+}
+
+.account-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color);
+  flex-wrap: wrap;
+}
+
+.account-credit-limit {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  font-family: "Courier New", monospace;
+}
+
+.account-view-bills-btn {
+  background: none;
+  border: 1px solid var(--accent-blue);
+  border-radius: 4px;
+  color: var(--accent-blue);
+  font-size: 0.75rem;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.account-view-bills-btn:hover {
+  background: rgba(74, 158, 255, 0.12);
+}
+
 @media (max-width: 768px) {
   .accounts-grid {
     grid-template-columns: 1fr;

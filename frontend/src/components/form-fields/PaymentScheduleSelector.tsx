@@ -25,7 +25,7 @@ export function PaymentScheduleSelector({
     } else if (mode === "installment") {
       onChange({ mode: "installment", months: 2 });
     } else {
-      onChange({ mode: "recurring", every_months: 1 });
+      onChange({ mode: "recurring", every: 1, unit: "month" });
     }
   };
 
@@ -60,11 +60,11 @@ export function PaymentScheduleSelector({
 
       {value.mode === "recurring" && (
         <RecurringField
-          everyMonths={value.every_months}
-          onChange={(every_months) =>
-            onChange({ mode: "recurring", every_months })
+          every={value.every}
+          unit={value.unit}
+          onChange={(every, unit) =>
+            onChange({ mode: "recurring", every, unit })
           }
-          disabled={disabled}
         />
       )}
     </div>

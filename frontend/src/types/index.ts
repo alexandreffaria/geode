@@ -8,9 +8,12 @@ export interface InstallmentSchedule {
   months: number; // number of installments (>= 2)
 }
 
+export type RecurrenceUnit = "week" | "month";
+
 export interface RecurringSchedule {
   mode: "recurring";
-  every_months: number; // repeat every N months (>= 1)
+  every: number; // interval count (>= 1)
+  unit: RecurrenceUnit; // "week" or "month"
 }
 
 export type PaymentSchedule =
@@ -30,7 +33,11 @@ interface BaseTransaction {
   installment_group_id?: string;
   // Recurrence fields
   recurrence_months?: number;
+  recurrence_unit?: "week" | "month";
   recurrence_group_id?: string;
+  // Credit card fields
+  paid?: boolean | null;
+  credit_card_bill_month?: string | null;
 }
 
 // Purchase: money leaves account, goes to category
@@ -72,6 +79,8 @@ export interface Account {
   gradient_end: string; // hex color
   created_at: string;
   last_updated: string;
+  type: "checking" | "credit_card";
+  credit_limit?: number | null;
 }
 
 export interface CreateAccountRequest {
@@ -81,6 +90,8 @@ export interface CreateAccountRequest {
   imageURL?: string;
   gradientStart?: string;
   gradientEnd?: string;
+  type?: "checking" | "credit_card";
+  creditLimit?: number | null;
 }
 
 export interface UpdateAccountRequest {
@@ -91,6 +102,16 @@ export interface UpdateAccountRequest {
   imageURL?: string;
   gradientStart?: string;
   gradientEnd?: string;
+  type?: "checking" | "credit_card";
+  creditLimit?: number | null;
+}
+
+export interface CreditCardBillSummary {
+  month: string; // "YYYY-MM"
+  total_amount: number;
+  paid_amount: number;
+  unpaid_amount: number;
+  is_fully_paid: boolean;
 }
 
 // Form data for creating transactions

@@ -71,13 +71,21 @@ type Transaction struct {
 	ToAccount   *string `json:"to_account,omitempty"`
 
 	// Installment support
-	InstallmentTotal   *int    `json:"installment_total,omitempty"`   // total number of installments (e.g. 12)
-	InstallmentCurrent *int    `json:"installment_current,omitempty"` // which installment this is (1-based)
+	InstallmentTotal   *int    `json:"installment_total,omitempty"`    // total number of installments (e.g. 12)
+	InstallmentCurrent *int    `json:"installment_current,omitempty"`  // which installment this is (1-based)
 	InstallmentGroupID *string `json:"installment_group_id,omitempty"` // UUID linking all installments together
 
 	// Recurrence support
-	RecurrenceMonths  *int    `json:"recurrence_months,omitempty"`  // repeat every N months
+	RecurrenceMonths  *int    `json:"recurrence_months,omitempty"`   // repeat every N months
+	RecurrenceUnit    *string `json:"recurrence_unit,omitempty"`     // "week" or "month" (nil defaults to "month")
 	RecurrenceGroupID *string `json:"recurrence_group_id,omitempty"` // UUID linking recurrence instances
+
+	// Credit card support
+	// Paid: nil = not applicable (regular transactions), true = paid, false = unpaid/pending.
+	// Unpaid transactions (Paid == false) do NOT affect account balances.
+	Paid                *bool   `json:"paid,omitempty"`
+	// CreditCardBillMonth links a transaction to a specific credit card billing month (format: "YYYY-MM").
+	CreditCardBillMonth *string `json:"credit_card_bill_month,omitempty"`
 }
 
 // Validate checks if the transaction is valid
@@ -104,6 +112,12 @@ func (t *Transaction) Validate() error {
 	// Recurrence validation
 	if t.RecurrenceMonths != nil && *t.RecurrenceMonths < 1 {
 		return errors.New("recurrence_months must be >= 1")
+	}
+	if t.RecurrenceUnit != nil {
+		unit := *t.RecurrenceUnit
+		if unit != "week" && unit != "month" {
+			return errors.New("recurrence_unit must be \"week\" or \"month\"")
+		}
 	}
 
 	// Installments and recurrence are mutually exclusive

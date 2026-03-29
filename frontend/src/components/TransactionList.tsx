@@ -3,6 +3,9 @@ import {
   formatDate,
   formatAmount,
   getTransactionTypeLabel,
+  isTransactionPending,
+  formatBillMonth,
+  getTransactionBillMonth,
 } from "../utils/transactionUtils";
 import "./TransactionList.css";
 
@@ -72,18 +75,44 @@ export function TransactionList({
             <tbody>
               {transactions.map((transaction) => {
                 const categoryField = getCategoryField(transaction);
+                const pending = isTransactionPending(transaction);
+                const billMonth = getTransactionBillMonth(transaction);
+                const isPaid = transaction.paid === true;
+
                 return (
-                  <tr key={transaction.id}>
+                  <tr
+                    key={transaction.id}
+                    className={pending ? "transaction-row--pending" : ""}
+                  >
                     <td className="date-cell">
                       {formatDate(transaction.date)}
                     </td>
                     <td>
-                      <span className={`type-badge type-${transaction.type}`}>
-                        {getTransactionTypeLabel(transaction.type)}
-                      </span>
+                      <div className="type-cell">
+                        <span className={`type-badge type-${transaction.type}`}>
+                          {getTransactionTypeLabel(transaction.type)}
+                        </span>
+                        {pending && (
+                          <span className="status-badge status-badge--pending">
+                            Pending
+                          </span>
+                        )}
+                        {isPaid && (
+                          <span className="status-badge status-badge--paid">
+                            Paid
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="description-cell">
-                      {transaction.description || "—"}
+                      <div className="description-content">
+                        <span>{transaction.description || "—"}</span>
+                        {billMonth && (
+                          <span className="bill-month-label">
+                            📅 {formatBillMonth(billMonth)}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="account-cell">
                       {getFromField(transaction)}
@@ -94,7 +123,9 @@ export function TransactionList({
                         : getToField(transaction)}
                     </td>
                     <td className="amount-cell">
-                      <span className={getAmountClass(transaction.type)}>
+                      <span
+                        className={`${getAmountClass(transaction.type)}${pending ? " amount--pending" : ""}`}
+                      >
                         {formatAmount(
                           transaction.amount,
                           transaction.type === "earning",

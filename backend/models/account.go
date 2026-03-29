@@ -5,6 +5,12 @@ import (
 	"time"
 )
 
+// Account type constants
+const (
+	AccountTypeChecking   = "checking"
+	AccountTypeCreditCard = "credit_card"
+)
+
 // gradientPalette is a set of pleasant color pairs for auto-generated gradients
 var gradientPalette = [][2]string{
 	{"#4a9eff", "#6bff6b"},
@@ -21,20 +27,33 @@ var gradientPalette = [][2]string{
 
 // Account represents a financial account
 type Account struct {
-	Name           string    `json:"name"`
-	Balance        float64   `json:"balance"`
-	Currency       string    `json:"currency"`
-	InitialBalance float64   `json:"initial_balance"`
-	Archived       bool      `json:"archived"`
-	ImageURL       string    `json:"image_url,omitempty"`
-	GradientStart  string    `json:"gradient_start"`
-	GradientEnd    string    `json:"gradient_end"`
+	Name           string   `json:"name"`
+	Balance        float64  `json:"balance"`
+	Currency       string   `json:"currency"`
+	InitialBalance float64  `json:"initial_balance"`
+	Archived       bool     `json:"archived"`
+	ImageURL       string   `json:"image_url,omitempty"`
+	GradientStart  string   `json:"gradient_start"`
+	GradientEnd    string   `json:"gradient_end"`
+	// Type is the account type: "checking" (default) or "credit_card"
+	Type           string   `json:"type"`
+	// CreditLimit is only applicable for credit_card accounts
+	CreditLimit    *float64 `json:"credit_limit,omitempty"`
 	CreatedAt      time.Time `json:"created_at"`
 	LastUpdated    time.Time `json:"last_updated"`
 }
 
+// GetType returns the account type, defaulting to "checking" for backward compatibility.
+func (a *Account) GetType() string {
+	if a.Type == "" {
+		return AccountTypeChecking
+	}
+	return a.Type
+}
+
 // NewAccount creates a new account with the given name and optional initial balance.
 // If initialBalance is not provided (nil), it defaults to 0.
+// The account type defaults to "checking".
 func NewAccount(name string, initialBalance ...float64) *Account {
 	now := time.Now()
 
@@ -55,6 +74,7 @@ func NewAccount(name string, initialBalance ...float64) *Account {
 		ImageURL:       "",
 		GradientStart:  pair[0],
 		GradientEnd:    pair[1],
+		Type:           AccountTypeChecking,
 		CreatedAt:      now,
 		LastUpdated:    now,
 	}

@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -146,11 +147,33 @@ func registerRoutes(mux *http.ServeMux, h *Handlers) {
 
 	mux.HandleFunc("/api/accounts/", middleware.Chain(
 		func(w http.ResponseWriter, r *http.Request) {
-			name := r.URL.Path[len("/api/accounts/"):]
-			if name == "" {
+			path := r.URL.Path[len("/api/accounts/"):]
+			if path == "" {
 				handlers.WriteError(w, http.StatusBadRequest, "Account name required")
 				return
 			}
+
+			// Route: GET /api/accounts/:name/credit-card-bills
+			if strings.HasSuffix(path, "/credit-card-bills") {
+				if r.Method == http.MethodGet {
+					h.accounts.GetCreditCardBills(w, r)
+				} else {
+					handlers.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
+				}
+				return
+			}
+
+			// Route: POST /api/accounts/:name/pay-bill
+			if strings.HasSuffix(path, "/pay-bill") {
+				if r.Method == http.MethodPost {
+					h.accounts.PayBill(w, r)
+				} else {
+					handlers.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
+				}
+				return
+			}
+
+			// Routes for a specific account by name
 			switch r.Method {
 			case http.MethodGet:
 				h.accounts.GetAccountByName(w, r)

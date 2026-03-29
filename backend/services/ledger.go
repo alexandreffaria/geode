@@ -2,11 +2,13 @@ package services
 
 import (
 	"errors"
+	"fmt"
+	"sort"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/meulindo/geode/backend/models"
 	"github.com/meulindo/geode/backend/storage"
-	"github.com/google/uuid"
 )
 
 // LedgerService handles business logic for transactions and accounts
@@ -151,8 +153,20 @@ func (s *LedgerService) applyBalanceChange(accountID string, amount float64, isC
 	return s.adjustAccountBalance(accountID, adjustment)
 }
 
-// updateAccountBalances updates the balances of accounts affected by a transaction
+// isUnpaid returns true if the transaction has Paid explicitly set to false.
+// Transactions with Paid == nil or Paid == true are considered settled and affect balances.
+func isUnpaid(transaction *models.Transaction) bool {
+	return transaction.Paid != nil && !*transaction.Paid
+}
+
+// updateAccountBalances updates the balances of accounts affected by a transaction.
+// Transactions with Paid == false (unpaid/pending) are skipped — they do not affect balances.
 func (s *LedgerService) updateAccountBalances(transaction *models.Transaction) error {
+	// Unpaid transactions do not affect balances
+	if isUnpaid(transaction) {
+		return nil
+	}
+
 	switch transaction.Type {
 	case models.TransactionTypePurchase:
 		// Money leaves the account (category is just metadata, no balance tracking)
@@ -188,8 +202,14 @@ func (s *LedgerService) updateAccountBalances(transaction *models.Transaction) e
 	return nil
 }
 
-// reverseAccountBalances reverses the effect of a transaction on account balances
+// reverseAccountBalances reverses the effect of a transaction on account balances.
+// Unpaid transactions (Paid == false) had no effect on balances, so nothing to reverse.
 func (s *LedgerService) reverseAccountBalances(transaction *models.Transaction) error {
+	// Unpaid transactions never affected balances, so nothing to reverse
+	if isUnpaid(transaction) {
+		return nil
+	}
+
 	switch transaction.Type {
 	case models.TransactionTypePurchase:
 		// Reverse: add money back to account
@@ -326,7 +346,8 @@ func (s *LedgerService) GetAccountByName(name string) (*models.Account, error) {
 
 // CreateAccount creates a new account with the given parameters.
 // If gradientStart or gradientEnd are empty, random ones are generated via NewAccount.
-func (s *LedgerService) CreateAccount(name string, initialBalance float64, currency, imageURL, gradientStart, gradientEnd string) (*models.Account, error) {
+// accountType defaults to "checking" if empty.
+func (s *LedgerService) CreateAccount(name string, initialBalance float64, currency, imageURL, gradientStart, gradientEnd, accountType string, creditLimit *float64) (*models.Account, error) {
 	if name == "" {
 		return nil, errors.New("account name is required")
 	}
@@ -353,6 +374,12 @@ func (s *LedgerService) CreateAccount(name string, initialBalance float64, curre
 	}
 	if gradientEnd != "" {
 		account.GradientEnd = gradientEnd
+	}
+	if accountType != "" {
+		account.Type = accountType
+	}
+	if creditLimit != nil {
+		account.CreditLimit = creditLimit
 	}
 
 	if err := s.storage.SaveAccount(account); err != nil {
@@ -407,6 +434,12 @@ func (s *LedgerService) UpdateAccount(name string, req *models.AccountUpdateRequ
 		delta := *req.InitialBalance - account.InitialBalance
 		account.Balance += delta
 		account.InitialBalance = *req.InitialBalance
+	}
+	if req.Type != nil {
+		account.Type = *req.Type
+	}
+	if req.CreditLimit != nil {
+		account.CreditLimit = req.CreditLimit
 	}
 
 	account.LastUpdated = time.Now()
@@ -586,4 +619,161 @@ func (s *LedgerService) DeleteCategory(name string) error {
 		return errors.New("category not found")
 	}
 	return s.storage.DeleteCategory(name)
+}
+
+// CreditCardBillSummary holds the monthly bill summary for a credit card account.
+type CreditCardBillSummary struct {
+	Month        string  `json:"month"`          // "YYYY-MM"
+	TotalAmount  float64 `json:"total_amount"`   // sum of all purchases for this month
+	PaidAmount   float64 `json:"paid_amount"`    // sum of paid bill payments for this month
+	UnpaidAmount float64 `json:"unpaid_amount"`  // total_amount - paid_amount
+	IsFullyPaid  bool    `json:"is_fully_paid"`  // true when unpaid_amount <= 0
+}
+
+// GetCreditCardBills returns the monthly bill summary for a credit card account.
+// It groups purchase transactions by CreditCardBillMonth (or transaction month if nil),
+// and matches bill payment transfers (ToAccount == accountName, Paid == true) per month.
+func (s *LedgerService) GetCreditCardBills(accountName string) ([]*CreditCardBillSummary, error) {
+	account, err := s.storage.GetAccountByName(accountName)
+	if err != nil {
+		return nil, err
+	}
+	if account == nil {
+		return nil, errors.New("account not found")
+	}
+
+	allTransactions, err := s.storage.GetAllTransactions()
+	if err != nil {
+		return nil, err
+	}
+
+	// monthTotals accumulates purchase amounts per billing month
+	monthTotals := map[string]float64{}
+	// monthPaid accumulates paid bill payment amounts per billing month
+	monthPaid := map[string]float64{}
+
+	for _, t := range allTransactions {
+		// Purchase transactions on this credit card account
+		if t.Type == models.TransactionTypePurchase && t.Account != nil && *t.Account == accountName {
+			month := billMonth(t)
+			monthTotals[month] += t.Amount
+		}
+
+		// Bill payment transfers: transfer TO this credit card account with Paid set
+		if t.Type == models.TransactionTypeTransfer && t.ToAccount != nil && *t.ToAccount == accountName {
+			if t.Paid != nil && *t.Paid {
+				// Paid bill payment — credit against the billing month
+				month := ""
+				if t.CreditCardBillMonth != nil && *t.CreditCardBillMonth != "" {
+					month = *t.CreditCardBillMonth
+				} else {
+					month = t.Date.Time.Format("2006-01")
+				}
+				monthPaid[month] += t.Amount
+			}
+		}
+	}
+
+	// Build sorted list of all months that appear in either map
+	monthSet := map[string]struct{}{}
+	for m := range monthTotals {
+		monthSet[m] = struct{}{}
+	}
+	for m := range monthPaid {
+		monthSet[m] = struct{}{}
+	}
+
+	months := make([]string, 0, len(monthSet))
+	for m := range monthSet {
+		months = append(months, m)
+	}
+	sort.Strings(months)
+
+	summaries := make([]*CreditCardBillSummary, 0, len(months))
+	for _, m := range months {
+		total := monthTotals[m]
+		paid := monthPaid[m]
+		unpaid := total - paid
+		summaries = append(summaries, &CreditCardBillSummary{
+			Month:        m,
+			TotalAmount:  total,
+			PaidAmount:   paid,
+			UnpaidAmount: unpaid,
+			IsFullyPaid:  unpaid <= 0,
+		})
+	}
+
+	return summaries, nil
+}
+
+// billMonth returns the billing month string ("YYYY-MM") for a transaction.
+// Uses CreditCardBillMonth if set, otherwise falls back to the transaction's own month.
+func billMonth(t *models.Transaction) string {
+	if t.CreditCardBillMonth != nil && *t.CreditCardBillMonth != "" {
+		return *t.CreditCardBillMonth
+	}
+	return t.Date.Time.Format("2006-01")
+}
+
+// PayBillRequest holds the parameters for paying a credit card bill.
+type PayBillRequest struct {
+	FromAccount string  `json:"from_account"`
+	Amount      float64 `json:"amount"`
+	BillMonth   string  `json:"bill_month"`   // "YYYY-MM"
+	Description string  `json:"description"`
+}
+
+// PayCreditCardBill creates a bill payment transfer transaction for a credit card account.
+// The payment reduces the credit card's balance (debt) and reduces the checking account's balance.
+func (s *LedgerService) PayCreditCardBill(creditCardAccountName string, req *PayBillRequest) (*models.Transaction, error) {
+	if req.FromAccount == "" {
+		return nil, errors.New("from_account is required")
+	}
+	if req.Amount <= 0 {
+		return nil, errors.New("amount must be greater than 0")
+	}
+	if req.BillMonth == "" {
+		return nil, errors.New("bill_month is required")
+	}
+
+	// Verify credit card account exists
+	ccAccount, err := s.storage.GetAccountByName(creditCardAccountName)
+	if err != nil {
+		return nil, err
+	}
+	if ccAccount == nil {
+		return nil, errors.New("credit card account not found")
+	}
+
+	// Verify source account exists
+	fromAccount, err := s.storage.GetAccountByName(req.FromAccount)
+	if err != nil {
+		return nil, err
+	}
+	if fromAccount == nil {
+		return nil, errors.New("from_account not found: " + req.FromAccount)
+	}
+
+	description := req.Description
+	if description == "" {
+		description = fmt.Sprintf("Credit card payment - %s", req.BillMonth)
+	}
+
+	paid := true
+	t := &models.Transaction{
+		Type:                models.TransactionTypeTransfer,
+		Date:                models.Date{Time: time.Now()},
+		Amount:              req.Amount,
+		Description:         description,
+		FromAccount:         &req.FromAccount,
+		ToAccount:           &creditCardAccountName,
+		Paid:                &paid,
+		CreditCardBillMonth: &req.BillMonth,
+	}
+
+	saved, err := s.saveSingleTransaction(t)
+	if err != nil {
+		return nil, err
+	}
+	return saved, nil
 }
