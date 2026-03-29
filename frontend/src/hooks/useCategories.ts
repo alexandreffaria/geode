@@ -13,8 +13,8 @@ export interface UseCategoriesResult {
   error: string | null;
   refetch: () => Promise<void>;
   createCategory: (data: CreateCategoryRequest) => Promise<void>;
-  updateCategory: (name: string, data: UpdateCategoryRequest) => Promise<void>;
-  deleteCategory: (name: string) => Promise<void>;
+  updateCategory: (id: string, data: UpdateCategoryRequest) => Promise<void>;
+  deleteCategory: (id: string) => Promise<void>;
 }
 
 export function useCategories(): UseCategoriesResult {
@@ -38,16 +38,16 @@ export function useCategories(): UseCategoriesResult {
   );
 
   const updateCategory = useCallback(
-    async (name: string, data: UpdateCategoryRequest): Promise<void> => {
-      await apiService.updateCategory(name, data);
+    async (id: string, data: UpdateCategoryRequest): Promise<void> => {
+      await apiService.updateCategory(id, data);
       await refetch();
     },
     [refetch],
   );
 
   const deleteCategory = useCallback(
-    async (name: string): Promise<void> => {
-      await apiService.deleteCategory(name);
+    async (id: string): Promise<void> => {
+      await apiService.deleteCategory(id);
       await refetch();
     },
     [refetch],

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/google/uuid"
 	"github.com/meulindo/geode/backend/models"
 )
 
@@ -106,6 +107,26 @@ func (s *JSONStorage) GetTransactionByID(id string) (*models.Transaction, error)
 	}
 
 	return nil, errors.New("transaction not found")
+}
+
+// GetTransactionsByGroupID retrieves all transactions belonging to a recurrence group
+func (s *JSONStorage) GetTransactionsByGroupID(groupID string) ([]*models.Transaction, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	transactions, err := s.readTransactions()
+	if err != nil {
+		return nil, err
+	}
+
+	var result []*models.Transaction
+	for _, t := range transactions {
+		if t.RecurrenceGroupID != nil && *t.RecurrenceGroupID == groupID {
+			result = append(result, t)
+		}
+	}
+
+	return result, nil
 }
 
 // UpdateTransaction updates an existing transaction in the JSON file
@@ -237,6 +258,54 @@ func (s *JSONStorage) UpdateAccount(account *models.Account) error {
 	return s.writeAccounts(accounts)
 }
 
+// SetMainAccount sets is_main = true for the named account and false for all others.
+// Returns an error if the account is not found.
+func (s *JSONStorage) SetMainAccount(name string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	accounts, err := s.readAccounts()
+	if err != nil {
+		return err
+	}
+
+	found := false
+	for _, a := range accounts {
+		if a.Name == name {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return errors.New("account not found")
+	}
+
+	for _, a := range accounts {
+		a.IsMain = a.Name == name
+	}
+
+	return s.writeAccounts(accounts)
+}
+
+// GetMainAccount returns the account with is_main == true, or nil if none is set.
+func (s *JSONStorage) GetMainAccount() (*models.Account, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	accounts, err := s.readAccounts()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, a := range accounts {
+		if a.IsMain {
+			return a, nil
+		}
+	}
+
+	return nil, nil
+}
+
 // DeleteAccount removes an account by name from the JSON file
 func (s *JSONStorage) DeleteAccount(name string) error {
 	s.mu.Lock()
@@ -263,7 +332,10 @@ func (s *JSONStorage) DeleteAccount(name string) error {
 	return s.writeAccounts(accounts)
 }
 
-// SaveCategory saves a new category to the JSON file
+// SaveCategory saves a new category to the JSON file.
+// Generates a UUID if category.ID is empty.
+// Enforces uniqueness by (name, type, parent_id) scope — two categories may share
+// the same name if they differ in type or parent_id.
 func (s *JSONStorage) SaveCategory(category *models.Category) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -273,26 +345,62 @@ func (s *JSONStorage) SaveCategory(category *models.Category) error {
 		return err
 	}
 
-	// Check if category already exists
+	// Generate UUID if not already set
+	if category.ID == "" {
+		category.ID = uuid.New().String()
+	}
+
+	// Enforce uniqueness within (name, type, parent_id) scope
 	for _, c := range categories {
-		if c.Name == category.Name {
+		if c.Name == category.Name && c.Type == category.Type && parentIDEqual(c.ParentID, category.ParentID) {
 			return errors.New("category already exists")
 		}
 	}
 
-	categories = append(categories, category)
+	// Do not persist ParentName — it is a computed display field
+	toStore := *category
+	toStore.ParentName = nil
+
+	categories = append(categories, &toStore)
 	return s.writeCategories(categories)
 }
 
-// GetAllCategories retrieves all categories
+// GetAllCategories retrieves all categories with ParentName populated from ParentID.
 func (s *JSONStorage) GetAllCategories() ([]*models.Category, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	return s.readCategories()
+	categories, err := s.readCategories()
+	if err != nil {
+		return nil, err
+	}
+
+	return s.populateParentNames(categories), nil
 }
 
-// GetCategoryByName retrieves a category by name
+// GetCategoryByID retrieves a category by its UUID ID field.
+func (s *JSONStorage) GetCategoryByID(id string) (*models.Category, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	categories, err := s.readCategories()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, c := range categories {
+		if c.ID == id {
+			result := *c
+			result.ParentName = s.lookupParentName(c.ParentID, categories)
+			return &result, nil
+		}
+	}
+
+	return nil, nil // Return nil if not found (not an error)
+}
+
+// GetCategoryByName retrieves a category by name (kept for internal migration/lookup use).
+// Returns the first match found — note that names are no longer globally unique.
 func (s *JSONStorage) GetCategoryByName(name string) (*models.Category, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -304,41 +412,66 @@ func (s *JSONStorage) GetCategoryByName(name string) (*models.Category, error) {
 
 	for _, c := range categories {
 		if c.Name == name {
-			return c, nil
+			result := *c
+			result.ParentName = s.lookupParentName(c.ParentID, categories)
+			return &result, nil
 		}
 	}
 
 	return nil, nil // Return nil if not found (not an error)
 }
 
-// UpdateCategory updates an existing category
-func (s *JSONStorage) UpdateCategory(category *models.Category) error {
+// UpdateCategory finds a category by ID, replaces its fields, and persists.
+// Enforces uniqueness by (name, type, parent_id) scope (excluding the category being updated).
+func (s *JSONStorage) UpdateCategory(id string, category *models.Category) (*models.Category, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	categories, err := s.readCategories()
 	if err != nil {
-		return err
+		return nil, err
+	}
+
+	// Check uniqueness: no other category may share (name, type, parent_id)
+	for _, c := range categories {
+		if c.ID != id && c.Name == category.Name && c.Type == category.Type && parentIDEqual(c.ParentID, category.ParentID) {
+			return nil, errors.New("a category with that name already exists in the same scope")
+		}
 	}
 
 	found := false
+	var updated *models.Category
 	for i, c := range categories {
-		if c.Name == category.Name {
-			categories[i] = category
+		if c.ID == id {
+			// Preserve the original ID and CreatedAt
+			category.ID = c.ID
+			category.CreatedAt = c.CreatedAt
+			// Do not persist ParentName
+			toStore := *category
+			toStore.ParentName = nil
+			categories[i] = &toStore
+			updated = &toStore
 			found = true
 			break
 		}
 	}
 
 	if !found {
-		return errors.New("category not found")
+		return nil, errors.New("category not found")
 	}
 
-	return s.writeCategories(categories)
+	if err := s.writeCategories(categories); err != nil {
+		return nil, err
+	}
+
+	// Populate ParentName for the returned value
+	result := *updated
+	result.ParentName = s.lookupParentName(updated.ParentID, categories)
+	return &result, nil
 }
 
-// DeleteCategory removes a category by name from the JSON file
-func (s *JSONStorage) DeleteCategory(name string) error {
+// DeleteCategory removes a category by ID from the JSON file.
+func (s *JSONStorage) DeleteCategory(id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -349,7 +482,7 @@ func (s *JSONStorage) DeleteCategory(name string) error {
 
 	found := false
 	for i, c := range categories {
-		if c.Name == name {
+		if c.ID == id {
 			categories = append(categories[:i], categories[i+1:]...)
 			found = true
 			break
@@ -361,6 +494,52 @@ func (s *JSONStorage) DeleteCategory(name string) error {
 	}
 
 	return s.writeCategories(categories)
+}
+
+// populateParentNames returns a new slice of categories with ParentName set from ParentID.
+func (s *JSONStorage) populateParentNames(categories []*models.Category) []*models.Category {
+	// Build ID→Name index
+	idToName := make(map[string]string, len(categories))
+	for _, c := range categories {
+		idToName[c.ID] = c.Name
+	}
+
+	result := make([]*models.Category, len(categories))
+	for i, c := range categories {
+		copy := *c
+		if c.ParentID != nil && *c.ParentID != "" {
+			if name, ok := idToName[*c.ParentID]; ok {
+				copy.ParentName = &name
+			}
+		}
+		result[i] = &copy
+	}
+	return result
+}
+
+// lookupParentName returns a pointer to the parent's name given a parentID and the full list.
+func (s *JSONStorage) lookupParentName(parentID *string, categories []*models.Category) *string {
+	if parentID == nil || *parentID == "" {
+		return nil
+	}
+	for _, c := range categories {
+		if c.ID == *parentID {
+			name := c.Name
+			return &name
+		}
+	}
+	return nil
+}
+
+// parentIDEqual compares two nullable parent ID pointers for equality.
+func parentIDEqual(a, b *string) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return *a == *b
 }
 
 // readTransactions reads transactions from the JSON file

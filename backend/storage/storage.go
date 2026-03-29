@@ -8,6 +8,7 @@ type Storage interface {
 	SaveTransaction(transaction *models.Transaction) error
 	GetAllTransactions() ([]*models.Transaction, error)
 	GetTransactionByID(id string) (*models.Transaction, error)
+	GetTransactionsByGroupID(groupID string) ([]*models.Transaction, error)
 	UpdateTransaction(transaction *models.Transaction) error
 	DeleteTransaction(id string) error
 
@@ -17,11 +18,14 @@ type Storage interface {
 	GetAccountByName(name string) (*models.Account, error)
 	UpdateAccount(account *models.Account) error
 	DeleteAccount(name string) error
+	SetMainAccount(name string) error
+	GetMainAccount() (*models.Account, error)
 
 	// Category operations
 	SaveCategory(category *models.Category) error
 	GetAllCategories() ([]*models.Category, error)
-	GetCategoryByName(name string) (*models.Category, error)
-	UpdateCategory(category *models.Category) error
-	DeleteCategory(name string) error
+	GetCategoryByID(id string) (*models.Category, error)
+	GetCategoryByName(name string) (*models.Category, error) // kept for internal migration/lookup use
+	UpdateCategory(id string, category *models.Category) (*models.Category, error)
+	DeleteCategory(id string) error
 }

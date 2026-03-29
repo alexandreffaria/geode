@@ -23,8 +23,10 @@ interface AppLayoutProps {
   isAccountModalOpen: boolean;
   isCategoryModalOpen: boolean;
   // Data
+  transactions: Transaction[];
   accounts: Account[];
   categories: Category[];
+  mainAccountName?: string;
   // Handlers
   onCloseModal: () => void;
   onModalSuccess: () => void;
@@ -35,12 +37,10 @@ interface AppLayoutProps {
   onCreateAccount: (data: CreateAccountRequest) => Promise<void>;
   onUpdateAccount: (name: string, data: UpdateAccountRequest) => Promise<void>;
   onDeleteAccount: (name: string) => Promise<void>;
+  onSetMainAccount: (name: string) => Promise<void>;
   onCreateCategory: (data: CreateCategoryRequest) => Promise<void>;
-  onUpdateCategory: (
-    name: string,
-    data: UpdateCategoryRequest,
-  ) => Promise<void>;
-  onDeleteCategory: (name: string) => Promise<void>;
+  onUpdateCategory: (id: string, data: UpdateCategoryRequest) => Promise<void>;
+  onDeleteCategory: (id: string) => Promise<void>;
   onViewBills?: (account: Account) => void;
   error: string | null;
   onRetry: () => void;
@@ -50,8 +50,10 @@ export function AppLayout({
   modalState,
   isAccountModalOpen,
   isCategoryModalOpen,
+  transactions,
   accounts,
   categories,
+  mainAccountName,
   onCloseModal,
   onModalSuccess,
   onOpenAccountModal,
@@ -61,6 +63,7 @@ export function AppLayout({
   onCreateAccount,
   onUpdateAccount,
   onDeleteAccount,
+  onSetMainAccount,
   onCreateCategory,
   onUpdateCategory,
   onDeleteCategory,
@@ -140,8 +143,10 @@ export function AppLayout({
         isOpen={modalState.isOpen}
         mode={modalState.mode}
         transaction={modalState.transaction ?? undefined}
+        transactions={transactions}
         accounts={accounts}
         categories={categories}
+        mainAccountName={mainAccountName}
         onClose={onCloseModal}
         onSuccess={onModalSuccess}
       />
@@ -153,6 +158,7 @@ export function AppLayout({
         onCreateAccount={onCreateAccount}
         onUpdateAccount={onUpdateAccount}
         onDeleteAccount={onDeleteAccount}
+        onSetMainAccount={onSetMainAccount}
         onViewBills={onViewBills}
       />
 

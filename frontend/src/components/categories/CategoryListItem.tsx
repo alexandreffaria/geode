@@ -5,7 +5,7 @@ interface CategoryListItemProps {
   category: Category;
   isDeleting: boolean;
   onEdit: (category: Category) => void;
-  onDelete: (name: string) => void;
+  onDelete: (id: string) => void;
 }
 
 export function CategoryListItem({
@@ -47,7 +47,7 @@ export function CategoryListItem({
         <button
           type="button"
           className="icon-btn icon-btn--delete"
-          onClick={() => onDelete(category.name)}
+          onClick={() => onDelete(category.id)}
           disabled={isDeleting}
           aria-label={`Delete ${category.name}`}
           title="Delete category"

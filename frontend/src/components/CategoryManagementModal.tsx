@@ -19,17 +19,14 @@ interface CategoryManagementModalProps {
   onClose: () => void;
   categories: Category[];
   onCreateCategory: (data: CreateCategoryRequest) => Promise<void>;
-  onUpdateCategory: (
-    name: string,
-    data: UpdateCategoryRequest,
-  ) => Promise<void>;
-  onDeleteCategory: (name: string) => Promise<void>;
+  onUpdateCategory: (id: string, data: UpdateCategoryRequest) => Promise<void>;
+  onDeleteCategory: (id: string) => Promise<void>;
 }
 
 const DEFAULT_ADD_FORM: CreateCategoryRequest = {
   name: "",
   type: "expense",
-  parentName: null,
+  parent_id: null,
   imageURL: "",
   gradientStart: DEFAULT_GRADIENT_START,
   gradientEnd: DEFAULT_GRADIENT_END,
@@ -38,7 +35,7 @@ const DEFAULT_ADD_FORM: CreateCategoryRequest = {
 function buildEditFormState(category: Category): CategoryEditFormState {
   return {
     name: category.name,
-    parentName: category.parent_name ?? "",
+    parentId: category.parent_id ?? "",
     imageURL: category.image_url,
     gradientStart: category.gradient_start || DEFAULT_GRADIENT_START,
     gradientEnd: category.gradient_end || DEFAULT_GRADIENT_END,
@@ -51,22 +48,22 @@ function buildEditFormState(category: Category): CategoryEditFormState {
  */
 function buildTreeOrder(categories: Category[]): Category[] {
   const topLevel = categories
-    .filter((c) => !c.parent_name)
+    .filter((c) => !c.parent_id)
     .sort((a, b) => a.name.localeCompare(b.name));
 
   const result: Category[] = [];
   for (const parent of topLevel) {
     result.push(parent);
     const children = categories
-      .filter((c) => c.parent_name === parent.name)
+      .filter((c) => c.parent_id === parent.id)
       .sort((a, b) => a.name.localeCompare(b.name));
     result.push(...children);
   }
 
   // Also include orphaned children (parent doesn't exist) at the end
-  const inResult = new Set(result.map((c) => c.name));
+  const inResult = new Set(result.map((c) => c.id));
   const orphans = categories
-    .filter((c) => !inResult.has(c.name))
+    .filter((c) => !inResult.has(c.id))
     .sort((a, b) => a.name.localeCompare(b.name));
   result.push(...orphans);
 
@@ -74,21 +71,21 @@ function buildTreeOrder(categories: Category[]): Category[] {
 }
 
 /**
- * Get all descendant names of a category (to prevent circular parent selection)
+ * Get all descendant IDs of a category (to prevent circular parent selection)
  */
-function getDescendantNames(
-  categoryName: string,
+function getDescendantIds(
+  categoryId: string,
   allCategories: Category[],
 ): Set<string> {
   const descendants = new Set<string>();
-  const queue = [categoryName];
+  const queue = [categoryId];
   while (queue.length > 0) {
     const current = queue.shift()!;
-    const children = allCategories.filter((c) => c.parent_name === current);
+    const children = allCategories.filter((c) => c.parent_id === current);
     for (const child of children) {
-      if (!descendants.has(child.name)) {
-        descendants.add(child.name);
-        queue.push(child.name);
+      if (!descendants.has(child.id)) {
+        descendants.add(child.id);
+        queue.push(child.id);
       }
     }
   }
@@ -105,6 +102,7 @@ export function CategoryManagementModal({
 }: CategoryManagementModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
 
+  // editingCategory stores the category ID being edited (not name)
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<CategoryEditFormState | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
@@ -115,6 +113,7 @@ export function CategoryManagementModal({
   const [addError, setAddError] = useState<string | null>(null);
   const [addSaving, setAddSaving] = useState(false);
 
+  // deletingCategory stores the category ID being deleted
   const [deletingCategory, setDeletingCategory] = useState<string | null>(null);
 
   useModalAccessibility(isOpen, onClose, modalRef);
@@ -135,7 +134,7 @@ export function CategoryManagementModal({
 
   // --- Edit handlers ---
   const handleStartEdit = (category: Category) => {
-    setEditingCategory(category.name);
+    setEditingCategory(category.id);
     setEditForm(buildEditFormState(category));
     setEditError(null);
   };
@@ -167,7 +166,7 @@ export function CategoryManagementModal({
     try {
       await onUpdateCategory(editingCategory, {
         name: trimmedName,
-        parent_name: editForm.parentName, // "" means clear parent
+        parent_id: editForm.parentId || null, // "" means clear parent → send null
         imageURL: editForm.imageURL,
         gradientStart: editForm.gradientStart,
         gradientEnd: editForm.gradientEnd,
@@ -184,12 +183,18 @@ export function CategoryManagementModal({
   };
 
   // --- Delete handler ---
-  const handleDelete = async (name: string) => {
-    if (!window.confirm(`Delete category "${name}"? This cannot be undone.`))
+  const handleDelete = async (id: string) => {
+    const category = categories.find((c) => c.id === id);
+    const displayName = category?.name ?? id;
+    if (
+      !window.confirm(
+        `Delete category "${displayName}"? This cannot be undone.`,
+      )
+    )
       return;
-    setDeletingCategory(name);
+    setDeletingCategory(id);
     try {
-      await onDeleteCategory(name);
+      await onDeleteCategory(id);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to delete category.");
     } finally {
@@ -203,11 +208,11 @@ export function CategoryManagementModal({
     value: string | null,
   ) => {
     if (field === "type") {
-      // When type changes, reset parentName since parent options change
+      // When type changes, reset parent_id since parent options change
       setAddForm((prev) => ({
         ...prev,
         type: value as "income" | "expense",
-        parentName: null,
+        parent_id: null,
       }));
     } else {
       setAddForm((prev) => ({ ...prev, [field]: value }));
@@ -228,7 +233,7 @@ export function CategoryManagementModal({
       await onCreateCategory({
         ...addForm,
         name: trimmedName,
-        parentName: addForm.parentName || null,
+        parent_id: addForm.parent_id || null,
       });
       setAddForm({ ...DEFAULT_ADD_FORM, type: addForm.type });
     } catch (err) {
@@ -255,22 +260,22 @@ export function CategoryManagementModal({
     .sort((a, b) => a.name.localeCompare(b.name));
 
   const renderCategoryItem = (category: Category) => {
-    const isChild = !!category.parent_name;
+    const isChild = !!category.parent_id;
+    const descendants = getDescendantIds(category.id, categories);
     const editParentOptions = categories
       .filter((c) => {
         if (c.type !== category.type) return false;
-        if (c.name === category.name) return false;
-        const descendants = getDescendantNames(category.name, categories);
-        return !descendants.has(c.name);
+        if (c.id === category.id) return false;
+        return !descendants.has(c.id);
       })
       .sort((a, b) => a.name.localeCompare(b.name));
 
     return (
       <li
-        key={category.name}
+        key={category.id}
         className={`category-item${isChild ? " category-item--child" : ""}`}
       >
-        {editingCategory === category.name && editForm ? (
+        {editingCategory === category.id && editForm ? (
           <CategoryEditForm
             category={category}
             form={editForm}
@@ -284,7 +289,7 @@ export function CategoryManagementModal({
         ) : (
           <CategoryListItem
             category={category}
-            isDeleting={deletingCategory === category.name}
+            isDeleting={deletingCategory === category.id}
             onEdit={handleStartEdit}
             onDelete={handleDelete}
           />

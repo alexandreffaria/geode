@@ -5,22 +5,21 @@ import type { Category } from "../../types";
 import "./CategorySelect.css";
 
 interface CategorySelectProps {
-  value: string;
-  onChange: (value: string) => void;
+  value: string; // category ID (or "" if none selected)
+  onChange: (value: string) => void; // called with category ID
   categories: Category[];
   transactionType: "purchase" | "earning";
   disabled?: boolean;
 }
 
-function getCategoryDisplayName(
-  category: Category,
-  allCategories: Category[],
-): string {
+/**
+ * Returns the display name for a category.
+ * For subcategories, shows "Parent > Child" using parent_name (computed by backend).
+ */
+function getCategoryDisplayName(category: Category): string {
   if (category.parent_name) {
-    const parent = allCategories.find((c) => c.name === category.parent_name);
-    if (parent) {
-      return `${parent.name} > ${category.name}`;
-    }
+    // parent_name is already the resolved name from the backend
+    return `${category.parent_name} > ${category.name}`;
   }
   return category.name;
 }
@@ -38,10 +37,18 @@ export function CategorySelect({
     (cat) => cat.type === categoryType,
   );
 
-  // CategorySelect-specific select handler: propagates name to parent
+  // Find the currently selected category by ID
+  const selectedCategory = typeFilteredCategories.find((c) => c.id === value);
+
+  // The display text shown in the input when a category is selected
+  const selectedDisplayName = selectedCategory
+    ? getCategoryDisplayName(selectedCategory)
+    : "";
+
+  // CategorySelect-specific select handler: propagates category ID to parent
   const handleCategorySelect = useCallback(
     (category: Category) => {
-      onChange(category.name);
+      onChange(category.id);
     },
     [onChange],
   );
@@ -68,21 +75,18 @@ export function CategorySelect({
     items: typeFilteredCategories,
     onSelect: handleCategorySelect,
     onClear: handleClearCategory,
-    getItemLabel: (c) => c.name,
+    getItemLabel: (c) => getCategoryDisplayName(c),
   });
 
-  // Sync inputValue when value prop changes externally
+  // Sync inputValue when value prop changes externally (show display name, not ID)
   useEffect(() => {
-    setInputValue(value);
-  }, [value, setInputValue]);
+    setInputValue(selectedDisplayName);
+  }, [value, selectedDisplayName, setInputValue]);
 
   // Filtered categories based on current inputValue
   const displayedCategories = typeFilteredCategories.filter((cat) => {
     if (!inputValue) return true;
-    const displayName = getCategoryDisplayName(
-      cat,
-      typeFilteredCategories,
-    ).toLowerCase();
+    const displayName = getCategoryDisplayName(cat).toLowerCase();
     return (
       displayName.includes(inputValue.toLowerCase()) ||
       cat.name.toLowerCase().includes(inputValue.toLowerCase())
@@ -136,12 +140,12 @@ export function CategorySelect({
         case "Escape":
           e.preventDefault();
           setIsOpen(false);
-          setInputValue(value);
+          setInputValue(selectedDisplayName);
           setActiveIndex(-1);
           break;
         case "Tab":
           setIsOpen(false);
-          setInputValue(value);
+          setInputValue(selectedDisplayName);
           break;
       }
     },
@@ -153,11 +157,11 @@ export function CategorySelect({
       setIsOpen,
       setInputValue,
       setActiveIndex,
-      value,
+      selectedDisplayName,
     ],
   );
 
-  // Override outside-click to revert inputValue if it doesn't match selected value
+  // Override outside-click to revert inputValue if it doesn't match selected display name
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -165,16 +169,14 @@ export function CategorySelect({
         !containerRef.current.contains(e.target as Node)
       ) {
         setIsOpen(false);
-        if (inputValue !== value) {
-          setInputValue(value);
+        if (inputValue !== selectedDisplayName) {
+          setInputValue(selectedDisplayName);
         }
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [inputValue, value, containerRef, setIsOpen, setInputValue]);
-
-  const selectedCategory = typeFilteredCategories.find((c) => c.name === value);
+  }, [inputValue, selectedDisplayName, containerRef, setIsOpen, setInputValue]);
 
   return (
     <div
@@ -208,7 +210,7 @@ export function CategorySelect({
           aria-controls="category-select-listbox"
           aria-activedescendant={
             activeIndex >= 0
-              ? `category-option-${displayedCategories[activeIndex]?.name}`
+              ? `category-option-${displayedCategories[activeIndex]?.id}`
               : undefined
           }
         />
@@ -241,11 +243,11 @@ export function CategorySelect({
           ) : (
             displayedCategories.map((cat, idx) => (
               <li
-                key={cat.name}
-                id={`category-option-${cat.name}`}
-                className={`combobox-option${idx === activeIndex ? " combobox-option--active" : ""}${cat.name === value ? " combobox-option--selected" : ""}`}
+                key={cat.id}
+                id={`category-option-${cat.id}`}
+                className={`combobox-option${idx === activeIndex ? " combobox-option--active" : ""}${cat.id === value ? " combobox-option--selected" : ""}`}
                 role="option"
-                aria-selected={cat.name === value}
+                aria-selected={cat.id === value}
                 onMouseDown={(e) => {
                   // Use mousedown to prevent blur before click
                   e.preventDefault();
@@ -261,9 +263,9 @@ export function CategorySelect({
                   size={20}
                 />
                 <span className="combobox-option-label">
-                  {getCategoryDisplayName(cat, typeFilteredCategories)}
+                  {getCategoryDisplayName(cat)}
                 </span>
-                {cat.name === value && (
+                {cat.id === value && (
                   <span className="combobox-check" aria-hidden="true">
                     ✓
                   </span>

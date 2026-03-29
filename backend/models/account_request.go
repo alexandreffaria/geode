@@ -7,6 +7,7 @@ type AccountUpdateRequest struct {
 	Currency       *string  `json:"currency"`
 	InitialBalance *float64 `json:"initialBalance"`
 	Archived       *bool    `json:"archived"`
+	IsMain         *bool    `json:"is_main,omitempty"`
 	ImageURL       *string  `json:"imageURL"`
 	GradientStart  *string  `json:"gradientStart"`
 	GradientEnd    *string  `json:"gradientEnd"`

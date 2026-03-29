@@ -34,7 +34,7 @@ function getMonthLabel(): string {
 export function Dashboard({
   transactions,
   accounts,
-  categories: _categories,
+  categories,
   onAddTransaction,
   onEditTransaction,
   onDeleteTransaction,
@@ -301,6 +301,7 @@ export function Dashboard({
         ) : (
           <TransactionList
             transactions={recentTransactions}
+            categories={categories}
             onEditTransaction={onEditTransaction}
             onDeleteTransaction={onDeleteTransaction}
           />

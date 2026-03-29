@@ -1,5 +1,10 @@
 import { CURRENCY_SYMBOLS } from "../constants";
-import type { Transaction, TransactionFormData } from "../types";
+import type {
+  Category,
+  Transaction,
+  TransactionFormData,
+  TransactionType,
+} from "../types";
 
 /**
  * Checks if a transaction is pending (unpaid credit card transaction).
@@ -82,13 +87,34 @@ export function getTransactionTypeLabel(type: string): string {
 }
 
 /**
- * Returns the default empty form data for a new transaction.
+ * Resolves a category UUID to a human-readable display name.
+ * For subcategories, returns "Parent > Child" using parent_name from the backend.
+ * Falls back to the raw ID if the category is not found in the list.
  */
-export function getDefaultFormData(): TransactionFormData {
+export function resolveCategoryName(
+  categoryId: string,
+  categories: Category[],
+): string {
+  if (!categoryId) return "";
+  const cat = categories.find((c) => c.id === categoryId);
+  if (!cat) return categoryId; // fallback: raw ID if not found
+  if (cat.parent_name) {
+    return `${cat.parent_name} > ${cat.name}`;
+  }
+  return cat.name;
+}
+
+/**
+ * Returns the default empty form data for a new transaction.
+ * @param mainAccountName - Optional name of the main account to pre-fill.
+ */
+export function getDefaultFormData(
+  mainAccountName?: string,
+): TransactionFormData {
   return {
     type: "purchase",
     amount: "",
-    account: "",
+    account: mainAccountName ?? "",
     category: "",
     description: "",
     date: new Date().toISOString().slice(0, 10),
@@ -129,4 +155,39 @@ export function transactionToFormData(
     account: transaction.account,
     category: transaction.category ?? "",
   } as unknown as TransactionFormData;
+}
+
+/**
+ * Represents a unique past-transaction suggestion for the description autocomplete.
+ */
+export interface DescriptionSuggestion {
+  description: string;
+  account: string;
+  category: string;
+  transactionType: TransactionType;
+}
+
+/**
+ * Derives a deduplicated list of description suggestions from past transactions.
+ * Transactions are expected to be in reverse-chronological order (most-recent first),
+ * so the first occurrence of each description key is kept.
+ */
+export function getDescriptionSuggestions(
+  transactions: Transaction[],
+): DescriptionSuggestion[] {
+  const seen = new Map<string, DescriptionSuggestion>();
+  for (const tx of transactions) {
+    if (!tx.description?.trim()) continue;
+    const key = tx.description.trim().toLowerCase();
+    if (seen.has(key)) continue; // keep most-recent (first in reversed array)
+    const account = tx.type === "transfer" ? tx.from_account : tx.account;
+    const category = tx.type === "transfer" ? "" : (tx.category ?? "");
+    seen.set(key, {
+      description: tx.description.trim(),
+      account,
+      category,
+      transactionType: tx.type,
+    });
+  }
+  return Array.from(seen.values());
 }

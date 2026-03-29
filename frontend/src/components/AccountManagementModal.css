@@ -404,6 +404,32 @@
   color: var(--accent-blue, #4a9eff);
 }
 
+/* ---- Set as Main button ---- */
+.icon-btn--main {
+  font-size: 1.1rem;
+  color: var(--text-secondary, #b0b0b0);
+  transition:
+    color 0.18s,
+    transform 0.18s;
+}
+
+.icon-btn--main:hover:not(:disabled) {
+  color: #f5c518;
+  transform: scale(1.15);
+}
+
+.icon-btn--main-active {
+  color: #f5c518 !important;
+}
+
+/* ---- Main account badge (inline in name row) ---- */
+.main-account-badge {
+  color: #f5c518;
+  font-size: 0.85rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
 /* ============================================================
    Responsive
    ============================================================ */

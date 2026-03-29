@@ -153,6 +153,63 @@ func (h *AccountHandler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Account deleted: %s", name)
 }
 
+// SetMainAccount handles PUT /api/accounts/:name/main
+func (h *AccountHandler) SetMainAccount(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	path := r.URL.Path[len("/api/accounts/"):]
+	name := strings.TrimSuffix(path, "/main")
+	if name == "" {
+		WriteError(w, http.StatusBadRequest, "Account name required")
+		return
+	}
+
+	if err := h.ledger.SetMainAccount(name); err != nil {
+		log.Printf("Error setting main account %s: %v", name, err)
+		if err.Error() == "account not found" {
+			WriteError(w, http.StatusNotFound, err.Error())
+		} else {
+			WriteError(w, http.StatusInternalServerError, "Internal server error")
+		}
+		return
+	}
+
+	accounts, err := h.ledger.GetAllAccounts()
+	if err != nil {
+		log.Printf("Error getting accounts after setting main: %v", err)
+		WriteError(w, http.StatusInternalServerError, "Internal server error")
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, accounts)
+	log.Printf("Main account set to: %s", name)
+}
+
+// GetMainAccount handles GET /api/accounts/main
+func (h *AccountHandler) GetMainAccount(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	account, err := h.ledger.GetMainAccount()
+	if err != nil {
+		log.Printf("Error getting main account: %v", err)
+		WriteError(w, http.StatusInternalServerError, "Internal server error")
+		return
+	}
+
+	if account == nil {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, account)
+}
+
 // GetCreditCardBills handles GET /api/accounts/:name/credit-card-bills
 func (h *AccountHandler) GetCreditCardBills(w http.ResponseWriter, r *http.Request) {
 	// Extract account name from path: /api/accounts/:name/credit-card-bills

@@ -66,13 +66,13 @@ export function AddCategoryForm({
             </label>
             <select
               id="add-cat-parent"
-              value={form.parentName ?? ""}
-              onChange={(e) => onChange("parentName", e.target.value || null)}
+              value={form.parent_id ?? ""}
+              onChange={(e) => onChange("parent_id", e.target.value || null)}
               disabled={saving}
             >
               <option value="">None (top-level)</option>
               {parentOptions.map((c) => (
-                <option key={c.name} value={c.name}>
+                <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
               ))}

@@ -32,6 +32,7 @@ type Account struct {
 	Currency       string   `json:"currency"`
 	InitialBalance float64  `json:"initial_balance"`
 	Archived       bool     `json:"archived"`
+	IsMain         bool     `json:"is_main"`
 	ImageURL       string   `json:"image_url,omitempty"`
 	GradientStart  string   `json:"gradient_start"`
 	GradientEnd    string   `json:"gradient_end"`

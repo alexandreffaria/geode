@@ -1,0 +1,4 @@
+/* DescriptionAutocomplete — positions the dropdown relative to the input */
+.description-autocomplete {
+  position: relative;
+}

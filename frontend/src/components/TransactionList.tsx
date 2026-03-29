@@ -1,4 +1,4 @@
-import type { Transaction } from "../types";
+import type { Transaction, Category } from "../types";
 import {
   formatDate,
   formatAmount,
@@ -11,6 +11,7 @@ import "./TransactionList.css";
 
 interface TransactionListProps {
   transactions: Transaction[];
+  categories: Category[];
   onEditTransaction: (transaction: Transaction) => void;
   onDeleteTransaction: (transaction: Transaction) => void;
 }
@@ -33,9 +34,30 @@ const getToField = (transaction: Transaction) => {
   return "—"; // purchase has no "to"
 };
 
-const getCategoryField = (transaction: Transaction) => {
+/**
+ * Resolves a category ID to a display name.
+ * For subcategories, shows "Parent > Child" using parent_name from the backend.
+ * Falls back to the raw ID if the category is not found.
+ */
+function resolveCategoryDisplay(
+  categoryId: string,
+  categories: Category[],
+): string {
+  if (!categoryId) return "—";
+  const cat = categories.find((c) => c.id === categoryId);
+  if (!cat) return categoryId; // fallback: show raw ID if not found
+  if (cat.parent_name) {
+    return `${cat.parent_name} > ${cat.name}`;
+  }
+  return cat.name;
+}
+
+const getCategoryField = (
+  transaction: Transaction,
+  categories: Category[],
+): string => {
   if (transaction.type === "purchase" || transaction.type === "earning") {
-    return transaction.category;
+    return resolveCategoryDisplay(transaction.category, categories);
   }
   return "—"; // transfer has no category
 };
@@ -48,6 +70,7 @@ const getAmountClass = (type: Transaction["type"]) => {
 
 export function TransactionList({
   transactions,
+  categories,
   onEditTransaction,
   onDeleteTransaction,
 }: TransactionListProps) {
@@ -74,7 +97,7 @@ export function TransactionList({
             </thead>
             <tbody>
               {transactions.map((transaction) => {
-                const categoryField = getCategoryField(transaction);
+                const categoryField = getCategoryField(transaction, categories);
                 const pending = isTransactionPending(transaction);
                 const billMonth = getTransactionBillMonth(transaction);
                 const isPaid = transaction.paid === true;
@@ -112,6 +135,13 @@ export function TransactionList({
                             📅 {formatBillMonth(billMonth)}
                           </span>
                         )}
+                        {transaction.installment_total != null &&
+                          transaction.installment_total > 0 && (
+                            <span className="installment-badge">
+                              {transaction.installment_current}/
+                              {transaction.installment_total}
+                            </span>
+                          )}
                       </div>
                     </td>
                     <td className="account-cell">

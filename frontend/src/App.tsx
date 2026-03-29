@@ -21,12 +21,14 @@ function App() {
 
   const {
     accounts,
+    mainAccount,
     loading: accountsLoading,
     error: accountsError,
     refetch: refetchAccounts,
     createAccount,
     updateAccount,
     deleteAccount,
+    setMainAccount,
   } = useAccounts();
 
   const { categories, createCategory, updateCategory, deleteCategory } =
@@ -127,8 +129,10 @@ function App() {
               modalState={modalState}
               isAccountModalOpen={isAccountModalOpen}
               isCategoryModalOpen={isCategoryModalOpen}
+              transactions={transactions}
               accounts={accounts}
               categories={categories}
+              mainAccountName={mainAccount?.name}
               onCloseModal={closeModal}
               onModalSuccess={handleModalSuccess}
               onOpenAccountModal={() => setIsAccountModalOpen(true)}
@@ -138,6 +142,7 @@ function App() {
               onCreateAccount={createAccount}
               onUpdateAccount={updateAccount}
               onDeleteAccount={deleteAccount}
+              onSetMainAccount={setMainAccount}
               onCreateCategory={createCategory}
               onUpdateCategory={updateCategory}
               onDeleteCategory={deleteCategory}

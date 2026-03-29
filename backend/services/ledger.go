@@ -144,12 +144,12 @@ func (s *LedgerService) applyBalanceChange(accountID string, amount float64, isC
 	if accountID == "" {
 		return nil
 	}
-	
+
 	adjustment := amount
 	if !isCredit {
 		adjustment = -amount
 	}
-	
+
 	return s.adjustAccountBalance(accountID, adjustment)
 }
 
@@ -260,6 +260,9 @@ func (s *LedgerService) UpdateTransaction(updated *models.Transaction) (*models.
 		return nil, errors.New("transaction not found")
 	}
 
+	// Preserve fields from the original that should never be overwritten by the request body
+	updated.RecurrenceGroupID = original.RecurrenceGroupID
+
 	// Reverse the original transaction's effect on account balances
 	if err := s.reverseAccountBalances(original); err != nil {
 		return nil, err
@@ -281,6 +284,85 @@ func (s *LedgerService) UpdateTransaction(updated *models.Transaction) (*models.
 	}
 
 	return updated, nil
+}
+
+// UpdateRecurringGroup updates all transactions that share the given recurrence_group_id.
+// For each member of the group the original balance impact is reversed, the new values
+// (from `updated`) are applied while preserving per-transaction identity fields (ID, Date,
+// RecurrenceGroupID, InstallmentCurrent, InstallmentTotal), and the record is persisted.
+// Returns the full list of updated transactions.
+func (s *LedgerService) UpdateRecurringGroup(groupID string, updated *models.Transaction) ([]*models.Transaction, error) {
+	// Validate the template transaction
+	if err := updated.Validate(); err != nil {
+		return nil, err
+	}
+
+	// Fetch all transactions in the group
+	group, err := s.storage.GetTransactionsByGroupID(groupID)
+	if err != nil {
+		return nil, err
+	}
+	if len(group) == 0 {
+		return nil, errors.New("no transactions found for group: " + groupID)
+	}
+
+	results := make([]*models.Transaction, 0, len(group))
+
+	for _, original := range group {
+		// Build the updated record, preserving per-transaction identity fields
+		t := &models.Transaction{
+			// Identity — must not change
+			ID:                original.ID,
+			Date:              original.Date,
+			RecurrenceGroupID: original.RecurrenceGroupID,
+
+			// Installment metadata — preserve if present on the original
+			InstallmentTotal:   original.InstallmentTotal,
+			InstallmentCurrent: original.InstallmentCurrent,
+			InstallmentGroupID: original.InstallmentGroupID,
+
+			// All other fields come from the template
+			Type:        updated.Type,
+			Amount:      updated.Amount,
+			Description: updated.Description,
+			Account:     updated.Account,
+			Category:    updated.Category,
+			FromAccount: updated.FromAccount,
+			ToAccount:   updated.ToAccount,
+
+			// Recurrence metadata from template (months / unit stay consistent across group)
+			RecurrenceMonths: updated.RecurrenceMonths,
+			RecurrenceUnit:   updated.RecurrenceUnit,
+
+			// Payment state from template
+			Paid:                updated.Paid,
+			CreditCardBillMonth: updated.CreditCardBillMonth,
+		}
+
+		// Reverse the original balance impact
+		if err := s.reverseAccountBalances(original); err != nil {
+			return nil, fmt.Errorf("failed to reverse balances for transaction %s: %w", original.ID, err)
+		}
+
+		// Apply the new balance impact
+		if err := s.updateAccountBalances(t); err != nil {
+			// Best-effort rollback of this transaction's reversal
+			s.updateAccountBalances(original)
+			return nil, fmt.Errorf("failed to apply balances for transaction %s: %w", t.ID, err)
+		}
+
+		// Persist the updated record
+		if err := s.storage.UpdateTransaction(t); err != nil {
+			// Best-effort rollback
+			s.reverseAccountBalances(t)
+			s.updateAccountBalances(original)
+			return nil, fmt.Errorf("failed to save transaction %s: %w", t.ID, err)
+		}
+
+		results = append(results, t)
+	}
+
+	return results, nil
 }
 
 // DeleteTransaction deletes a transaction and reverses its effects on account balances
@@ -441,6 +523,15 @@ func (s *LedgerService) UpdateAccount(name string, req *models.AccountUpdateRequ
 	if req.CreditLimit != nil {
 		account.CreditLimit = req.CreditLimit
 	}
+	if req.IsMain != nil {
+		if *req.IsMain {
+			// Enforce single-main constraint: clear flag from all other accounts first
+			if err := s.storage.SetMainAccount(account.Name); err != nil {
+				return nil, err
+			}
+		}
+		account.IsMain = *req.IsMain
+	}
 
 	account.LastUpdated = time.Now()
 
@@ -458,6 +549,24 @@ func (s *LedgerService) UpdateAccount(name string, req *models.AccountUpdateRequ
 	return account, nil
 }
 
+// SetMainAccount designates the named account as the main account.
+// Validates the account exists, then delegates to storage to clear all others.
+func (s *LedgerService) SetMainAccount(name string) error {
+	account, err := s.storage.GetAccountByName(name)
+	if err != nil {
+		return err
+	}
+	if account == nil {
+		return errors.New("account not found")
+	}
+	return s.storage.SetMainAccount(name)
+}
+
+// GetMainAccount returns the account marked as main, or nil if none is set.
+func (s *LedgerService) GetMainAccount() (*models.Account, error) {
+	return s.storage.GetMainAccount()
+}
+
 // DeleteAccount deletes an account by name
 func (s *LedgerService) DeleteAccount(name string) error {
 	account, err := s.storage.GetAccountByName(name)
@@ -470,20 +579,26 @@ func (s *LedgerService) DeleteAccount(name string) error {
 	return s.storage.DeleteAccount(name)
 }
 
-// GetAllCategories retrieves all categories
+// GetAllCategories retrieves all categories with ParentName populated.
 func (s *LedgerService) GetAllCategories() ([]*models.Category, error) {
 	return s.storage.GetAllCategories()
 }
 
-// GetCategoryByName retrieves a category by name
+// GetCategoryByID retrieves a category by its UUID.
+func (s *LedgerService) GetCategoryByID(id string) (*models.Category, error) {
+	return s.storage.GetCategoryByID(id)
+}
+
+// GetCategoryByName retrieves a category by name (kept for internal use).
 func (s *LedgerService) GetCategoryByName(name string) (*models.Category, error) {
 	return s.storage.GetCategoryByName(name)
 }
 
 // CreateCategory creates a new category with the given parameters.
 // If gradientStart or gradientEnd are empty, random ones are generated via NewCategory.
-// If parentName is set, the parent category must exist.
-func (s *LedgerService) CreateCategory(name string, categoryType string, parentName *string, gradientStart, gradientEnd, imageURL string) (*models.Category, error) {
+// If parentID is set, the parent category must exist.
+// Uniqueness is enforced by (name, type, parent_id) scope.
+func (s *LedgerService) CreateCategory(name string, categoryType string, parentID *string, gradientStart, gradientEnd, imageURL string) (*models.Category, error) {
 	if name == "" {
 		return nil, errors.New("category name is required")
 	}
@@ -492,18 +607,9 @@ func (s *LedgerService) CreateCategory(name string, categoryType string, parentN
 		return nil, errors.New("type must be 'income' or 'expense'")
 	}
 
-	// Check for duplicate
-	existing, err := s.storage.GetCategoryByName(name)
-	if err != nil {
-		return nil, err
-	}
-	if existing != nil {
-		return nil, errors.New("category already exists")
-	}
-
-	// If parentName is set, verify parent exists
-	if parentName != nil && *parentName != "" {
-		parent, err := s.storage.GetCategoryByName(*parentName)
+	// If parentID is set, verify parent exists
+	if parentID != nil && *parentID != "" {
+		parent, err := s.storage.GetCategoryByID(*parentID)
 		if err != nil {
 			return nil, err
 		}
@@ -512,7 +618,8 @@ func (s *LedgerService) CreateCategory(name string, categoryType string, parentN
 		}
 	}
 
-	category := models.NewCategory(name, categoryType, parentName)
+	category := models.NewCategory(name, categoryType, parentID)
+	category.ID = uuid.New().String()
 
 	if gradientStart != "" {
 		category.GradientStart = gradientStart
@@ -524,17 +631,19 @@ func (s *LedgerService) CreateCategory(name string, categoryType string, parentN
 		category.ImageURL = imageURL
 	}
 
+	// SaveCategory enforces (name, type, parent_id) uniqueness and generates UUID if needed
 	if err := s.storage.SaveCategory(category); err != nil {
 		return nil, err
 	}
 	return category, nil
 }
 
-// UpdateCategory updates an existing category's fields.
-// When req.Name is set and different, the category is renamed (delete old + save new).
-// When req.ParentName is set to empty string "", the parent is cleared (top-level).
-func (s *LedgerService) UpdateCategory(name string, req models.CategoryUpdateRequest) (*models.Category, error) {
-	category, err := s.storage.GetCategoryByName(name)
+// UpdateCategory updates an existing category's fields by ID.
+// When req.Name is set and different, the category is renamed.
+// When req.ParentID is set to empty string "", the parent is cleared (top-level).
+// Uniqueness is enforced by (name, type, parent_id) scope.
+func (s *LedgerService) UpdateCategory(id string, req models.CategoryUpdateRequest) (*models.Category, error) {
+	category, err := s.storage.GetCategoryByID(id)
 	if err != nil {
 		return nil, err
 	}
@@ -542,45 +651,35 @@ func (s *LedgerService) UpdateCategory(name string, req models.CategoryUpdateReq
 		return nil, errors.New("category not found")
 	}
 
-	// Handle rename: check new name is not taken
-	if req.Name != nil && *req.Name != "" && *req.Name != category.Name {
-		existing, err := s.storage.GetCategoryByName(*req.Name)
-		if err != nil {
-			return nil, err
-		}
-		if existing != nil {
-			return nil, errors.New("a category with that name already exists")
-		}
-		// Delete old record, will save under new name below
-		if err := s.storage.DeleteCategory(category.Name); err != nil {
-			return nil, err
-		}
+	// Apply name update
+	if req.Name != nil && *req.Name != "" {
 		category.Name = *req.Name
+	}
+
+	// Apply type update
+	if req.Type != nil {
+		if *req.Type != "income" && *req.Type != "expense" {
+			return nil, errors.New("type must be 'income' or 'expense'")
+		}
+		category.Type = *req.Type
 	}
 
 	// Update parent: nil pointer = not provided; non-nil pointer = update
 	// empty string "" = clear parent (make top-level)
-	if req.ParentName != nil {
-		if *req.ParentName == "" {
-			category.ParentName = nil
+	if req.ParentID != nil {
+		if *req.ParentID == "" {
+			category.ParentID = nil
 		} else {
 			// Verify new parent exists
-			parent, err := s.storage.GetCategoryByName(*req.ParentName)
+			parent, err := s.storage.GetCategoryByID(*req.ParentID)
 			if err != nil {
 				return nil, err
 			}
 			if parent == nil {
 				return nil, errors.New("parent category not found")
 			}
-			category.ParentName = req.ParentName
+			category.ParentID = req.ParentID
 		}
-	}
-
-	if req.Type != nil {
-		if *req.Type != "income" && *req.Type != "expense" {
-			return nil, errors.New("type must be 'income' or 'expense'")
-		}
-		category.Type = *req.Type
 	}
 
 	if req.GradientStart != nil {
@@ -595,39 +694,33 @@ func (s *LedgerService) UpdateCategory(name string, req models.CategoryUpdateReq
 
 	category.LastUpdated = time.Now()
 
-	// If we renamed, the old record was deleted; save as new
-	if req.Name != nil && *req.Name != "" && *req.Name != name {
-		if err := s.storage.SaveCategory(category); err != nil {
-			return nil, err
-		}
-	} else {
-		if err := s.storage.UpdateCategory(category); err != nil {
-			return nil, err
-		}
+	updated, err := s.storage.UpdateCategory(id, category)
+	if err != nil {
+		return nil, err
 	}
 
-	return category, nil
+	return updated, nil
 }
 
-// DeleteCategory deletes a category by name
-func (s *LedgerService) DeleteCategory(name string) error {
-	category, err := s.storage.GetCategoryByName(name)
+// DeleteCategory deletes a category by ID.
+func (s *LedgerService) DeleteCategory(id string) error {
+	category, err := s.storage.GetCategoryByID(id)
 	if err != nil {
 		return err
 	}
 	if category == nil {
 		return errors.New("category not found")
 	}
-	return s.storage.DeleteCategory(name)
+	return s.storage.DeleteCategory(id)
 }
 
 // CreditCardBillSummary holds the monthly bill summary for a credit card account.
 type CreditCardBillSummary struct {
-	Month        string  `json:"month"`          // "YYYY-MM"
-	TotalAmount  float64 `json:"total_amount"`   // sum of all purchases for this month
-	PaidAmount   float64 `json:"paid_amount"`    // sum of paid bill payments for this month
-	UnpaidAmount float64 `json:"unpaid_amount"`  // total_amount - paid_amount
-	IsFullyPaid  bool    `json:"is_fully_paid"`  // true when unpaid_amount <= 0
+	Month        string  `json:"month"`         // "YYYY-MM"
+	TotalAmount  float64 `json:"total_amount"`  // sum of all purchases for this month
+	PaidAmount   float64 `json:"paid_amount"`   // sum of paid bill payments for this month
+	UnpaidAmount float64 `json:"unpaid_amount"` // total_amount - paid_amount
+	IsFullyPaid  bool    `json:"is_fully_paid"` // true when unpaid_amount <= 0
 }
 
 // GetCreditCardBills returns the monthly bill summary for a credit card account.
@@ -719,7 +812,7 @@ func billMonth(t *models.Transaction) string {
 type PayBillRequest struct {
 	FromAccount string  `json:"from_account"`
 	Amount      float64 `json:"amount"`
-	BillMonth   string  `json:"bill_month"`   // "YYYY-MM"
+	BillMonth   string  `json:"bill_month"`  // "YYYY-MM"
 	Description string  `json:"description"`
 }
 

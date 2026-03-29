@@ -1,4 +1,11 @@
-import { useState, useEffect, type FormEvent } from "react";
+import {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+  type FormEvent,
+} from "react";
 import type {
   TransactionFormData,
   TransactionType,
@@ -11,10 +18,12 @@ import { apiService } from "../services/api";
 import {
   getDefaultFormData,
   transactionToFormData,
+  getDescriptionSuggestions,
+  type DescriptionSuggestion,
 } from "../utils/transactionUtils";
 import { DateField } from "./form-fields/DateField";
 import { AmountField } from "./form-fields/AmountField";
-import { DescriptionField } from "./form-fields/DescriptionField";
+import { DescriptionAutocomplete } from "./form-fields/DescriptionAutocomplete";
 import { AccountSelect } from "./form-fields/AccountSelect";
 import { CategorySelect } from "./form-fields/CategorySelect";
 import { PaymentScheduleSelector } from "./form-fields/PaymentScheduleSelector";
@@ -23,36 +32,64 @@ import "./TransactionForm.css";
 interface TransactionFormProps {
   accounts: Account[];
   categories: Category[];
+  transactions: Transaction[];
   mode?: "add" | "edit";
   initialTransaction?: Transaction;
+  mainAccountName?: string;
   onSuccess?: () => void;
   onCancel?: () => void;
+  onRecurringEditChoice?: (formData: TransactionFormData) => void;
 }
+
+// Type button config
+const TYPE_BUTTONS: {
+  type: TransactionType;
+  label: string;
+  icon: string;
+  modifier: string;
+}[] = [
+  { type: "purchase", label: "Expense", icon: "↓", modifier: "expense" },
+  { type: "earning", label: "Income", icon: "↑", modifier: "income" },
+  { type: "transfer", label: "Transfer", icon: "⇄", modifier: "transfer" },
+];
 
 // Helper function to initialize form data
 const initializeFormData = (
   mode: "add" | "edit" | undefined,
   initialTransaction?: Transaction,
+  mainAccountName?: string,
 ): TransactionFormData => {
   if (mode === "edit" && initialTransaction) {
     return transactionToFormData(initialTransaction);
   }
-  return getDefaultFormData();
+  return getDefaultFormData(mainAccountName);
 };
 
 export function TransactionForm({
   accounts,
   categories,
+  transactions,
   mode = "add",
   initialTransaction,
+  mainAccountName,
   onSuccess,
   onCancel,
+  onRecurringEditChoice,
 }: TransactionFormProps) {
   const [formData, setFormData] = useState<TransactionFormData>(() =>
-    initializeFormData(mode, initialTransaction),
+    initializeFormData(mode, initialTransaction, mainAccountName),
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Ref for the amount input — used to shift focus after a description suggestion is selected
+  const amountInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Derive deduplicated description suggestions from past transactions (memoized)
+  const descriptionSuggestions = useMemo(
+    () => getDescriptionSuggestions(transactions),
+    [transactions],
+  );
 
   // Update form data when initialTransaction changes (for edit mode)
   useEffect(() => {
@@ -64,6 +101,17 @@ export function TransactionForm({
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (
+      mode === "edit" &&
+      initialTransaction?.recurrence_group_id &&
+      onRecurringEditChoice
+    ) {
+      // Hand off to parent to show the recurring edit dialog
+      onRecurringEditChoice(formData);
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -86,6 +134,7 @@ export function TransactionForm({
   };
 
   const handleTypeChange = (type: TransactionType) => {
+    if (mode === "edit") return; // disabled in edit mode
     const { amount, description, date, paymentSchedule } = formData;
     // Reset form data when type changes (only in add mode)
     if (type === "transfer") {
@@ -102,7 +151,7 @@ export function TransactionForm({
       setFormData({
         type: type,
         amount,
-        account: "",
+        account: mainAccountName ?? "",
         category: "",
         description,
         date,
@@ -115,6 +164,26 @@ export function TransactionForm({
     setFormData((prev) => ({ ...prev, paymentSchedule: schedule }));
   };
 
+  // When a description suggestion is selected, fill description + account + category
+  const handleSuggestionSelect = useCallback(
+    (suggestion: DescriptionSuggestion) => {
+      setFormData((prev) => {
+        if (prev.type === "transfer") {
+          // Transfer forms have no account/category fields — only fill description
+          return { ...prev, description: suggestion.description };
+        }
+        return {
+          ...prev,
+          description: suggestion.description,
+          account: suggestion.account || prev.account,
+          category: suggestion.category || prev.category,
+        };
+      });
+      // Focus shift to amount field is handled inside DescriptionAutocomplete
+    },
+    [],
+  );
+
   const submitButtonText =
     mode === "add"
       ? loading
@@ -124,35 +193,68 @@ export function TransactionForm({
         ? "Saving..."
         : "Update Transaction";
 
+  const isEditMode = mode === "edit";
+
   return (
     <form onSubmit={handleSubmit} className="transaction-form">
-      <div className="form-group">
-        <label htmlFor="type">Type</label>
-        <select
-          id="type"
-          value={formData.type}
-          onChange={(e) => handleTypeChange(e.target.value as TransactionType)}
-          disabled={mode === "edit"}
-          required
-        >
-          <option value="purchase">Purchase</option>
-          <option value="earning">Earning</option>
-          <option value="transfer">Transfer</option>
-        </select>
+      {/* 1. Type toggle buttons */}
+      <div className="type-toggle-group">
+        {TYPE_BUTTONS.map(({ type, label, icon, modifier }) => (
+          <button
+            key={type}
+            type="button"
+            className={[
+              "type-toggle-btn",
+              `type-toggle-btn--${modifier}`,
+              formData.type === type
+                ? `type-toggle-btn--active type-toggle-btn--active-${modifier}`
+                : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            onClick={() => handleTypeChange(type)}
+            disabled={isEditMode}
+            aria-pressed={formData.type === type}
+            title={
+              isEditMode
+                ? "Transaction type cannot be changed in edit mode"
+                : undefined
+            }
+          >
+            <span className="type-toggle-icon" aria-hidden="true">
+              {icon}
+            </span>
+            <span className="type-toggle-label">{label}</span>
+          </button>
+        ))}
       </div>
 
+      {/* 2. Description (moved to top) */}
+      <DescriptionAutocomplete
+        value={formData.description || ""}
+        onChange={(description) => setFormData({ ...formData, description })}
+        onSuggestionSelect={handleSuggestionSelect}
+        suggestions={descriptionSuggestions}
+        disabled={loading}
+        amountInputRef={amountInputRef}
+      />
+
+      {/* 3. Date */}
       <DateField
         value={formData.date}
         onChange={(date) => setFormData({ ...formData, date })}
         disabled={loading}
       />
 
+      {/* 4. Amount */}
       <AmountField
         value={formData.amount}
         onChange={(amount) => setFormData({ ...formData, amount })}
         disabled={loading}
+        inputRef={amountInputRef}
       />
 
+      {/* 5. Account(s) */}
       {formData.type === "transfer" ? (
         <>
           <div className="form-group">
@@ -198,6 +300,7 @@ export function TransactionForm({
             />
           </div>
 
+          {/* 6. Category */}
           <div className="form-group">
             <label htmlFor="category">Category</label>
             <CategorySelect
@@ -211,12 +314,7 @@ export function TransactionForm({
         </>
       )}
 
-      <DescriptionField
-        value={formData.description || ""}
-        onChange={(description) => setFormData({ ...formData, description })}
-        disabled={loading}
-      />
-
+      {/* 7. Payment Schedule (add mode only) */}
       {mode === "add" && (
         <PaymentScheduleSelector
           value={formData.paymentSchedule}
@@ -225,6 +323,7 @@ export function TransactionForm({
         />
       )}
 
+      {/* 8. Error + Actions */}
       {error && <div className="error-message">{error}</div>}
 
       <div className="form-actions">

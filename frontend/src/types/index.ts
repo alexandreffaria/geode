@@ -74,6 +74,7 @@ export interface Account {
   currency: string; // e.g. "BRL", "USD", "EUR"
   initial_balance: number;
   archived: boolean;
+  is_main: boolean;
   image_url: string;
   gradient_start: string; // hex color
   gradient_end: string; // hex color
@@ -150,9 +151,11 @@ export interface ApiError {
 }
 
 export interface Category {
+  id: string; // UUID primary key
   name: string;
   type: "income" | "expense";
-  parent_name: string | null;
+  parent_id: string | null; // stored parent reference
+  parent_name: string | null; // computed display field from backend
   gradient_start: string;
   gradient_end: string;
   image_url: string;
@@ -163,7 +166,7 @@ export interface Category {
 export interface CreateCategoryRequest {
   name: string;
   type: "income" | "expense";
-  parentName?: string | null;
+  parent_id?: string | null; // UUID of parent category
   gradientStart?: string;
   gradientEnd?: string;
   imageURL?: string;
@@ -172,7 +175,7 @@ export interface CreateCategoryRequest {
 export interface UpdateCategoryRequest {
   name?: string;
   type?: "income" | "expense";
-  parent_name?: string; // send "" to clear parent
+  parent_id?: string | null; // send null or "" to clear parent
   gradientStart?: string;
   gradientEnd?: string;
   imageURL?: string;

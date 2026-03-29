@@ -7,6 +7,7 @@ interface AccountListItemProps {
   isDeleting: boolean;
   onEdit: (account: Account) => void;
   onDelete: (name: string) => void;
+  onSetMain?: (name: string) => void;
   onViewBills?: (account: Account) => void;
 }
 
@@ -15,6 +16,7 @@ export function AccountListItem({
   isDeleting,
   onEdit,
   onDelete,
+  onSetMain,
   onViewBills,
 }: AccountListItemProps) {
   const isCreditCard = account.type === "credit_card";
@@ -34,6 +36,11 @@ export function AccountListItem({
       <div className="account-item-info">
         <div className="account-item-name-row">
           <span className="account-item-name">{account.name}</span>
+          {account.is_main && (
+            <span className="main-account-badge" title="Main account">
+              ★
+            </span>
+          )}
           {isCreditCard && (
             <span className="credit-card-badge" title="Credit Card">
               💳
@@ -59,6 +66,22 @@ export function AccountListItem({
       </div>
 
       <div className="account-item-actions">
+        {onSetMain && (
+          <button
+            type="button"
+            className={`icon-btn icon-btn--main${account.is_main ? " icon-btn--main-active" : ""}`}
+            onClick={() => onSetMain(account.name)}
+            aria-label={
+              account.is_main
+                ? `${account.name} is the main account`
+                : `Set ${account.name} as main account`
+            }
+            title={account.is_main ? "Main account" : "Set as main account"}
+            aria-pressed={account.is_main}
+          >
+            {account.is_main ? "★" : "☆"}
+          </button>
+        )}
         {isCreditCard && onViewBills && (
           <button
             type="button"

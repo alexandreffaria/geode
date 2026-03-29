@@ -25,6 +25,7 @@ interface AccountManagementModalProps {
   onCreateAccount: (data: CreateAccountRequest) => Promise<void>;
   onUpdateAccount: (name: string, data: UpdateAccountRequest) => Promise<void>;
   onDeleteAccount: (name: string) => Promise<void>;
+  onSetMainAccount: (name: string) => Promise<void>;
   onViewBills?: (account: Account) => void;
 }
 
@@ -61,6 +62,7 @@ export function AccountManagementModal({
   onCreateAccount,
   onUpdateAccount,
   onDeleteAccount,
+  onSetMainAccount,
   onViewBills,
 }: AccountManagementModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
@@ -76,6 +78,9 @@ export function AccountManagementModal({
   const [addSaving, setAddSaving] = useState(false);
 
   const [deletingAccount, setDeletingAccount] = useState<string | null>(null);
+  const [settingMainAccount, setSettingMainAccount] = useState<string | null>(
+    null,
+  );
 
   useModalAccessibility(isOpen, onClose, modalRef);
 
@@ -163,6 +168,18 @@ export function AccountManagementModal({
       );
     } finally {
       setEditSaving(false);
+    }
+  };
+
+  // --- Set Main handler ---
+  const handleSetMain = async (name: string) => {
+    setSettingMainAccount(name);
+    try {
+      await onSetMainAccount(name);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to set main account.");
+    } finally {
+      setSettingMainAccount(null);
     }
   };
 
@@ -267,6 +284,7 @@ export function AccountManagementModal({
                         isDeleting={deletingAccount === account.name}
                         onEdit={handleStartEdit}
                         onDelete={handleDelete}
+                        onSetMain={handleSetMain}
                         onViewBills={onViewBills}
                       />
                     )}

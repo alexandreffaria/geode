@@ -5,6 +5,79 @@
   gap: 16px;
 }
 
+/* ── Type toggle button group ── */
+.type-toggle-group {
+  display: flex;
+  gap: 8px;
+}
+
+.type-toggle-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid #3a3a3a;
+  background: #2a2a2a;
+  color: #b0b0b0;
+  transition: all 0.18s ease;
+}
+
+.type-toggle-btn:hover:not(:disabled) {
+  border-color: #555;
+  color: #e0e0e0;
+}
+
+.type-toggle-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.type-toggle-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.type-toggle-label {
+  line-height: 1;
+}
+
+/* Active states — colored per type */
+.type-toggle-btn--active-expense {
+  background: rgba(255, 107, 107, 0.18);
+  border-color: #ff6b6b;
+  color: #ff6b6b;
+}
+
+.type-toggle-btn--active-expense:hover:not(:disabled) {
+  background: rgba(255, 107, 107, 0.28);
+}
+
+.type-toggle-btn--active-income {
+  background: rgba(107, 255, 107, 0.15);
+  border-color: #6bff6b;
+  color: #6bff6b;
+}
+
+.type-toggle-btn--active-income:hover:not(:disabled) {
+  background: rgba(107, 255, 107, 0.25);
+}
+
+.type-toggle-btn--active-transfer {
+  background: rgba(74, 158, 255, 0.18);
+  border-color: #4a9eff;
+  color: #4a9eff;
+}
+
+.type-toggle-btn--active-transfer:hover:not(:disabled) {
+  background: rgba(74, 158, 255, 0.28);
+}
+
 .form-group {
   display: flex;
   flex-direction: column;

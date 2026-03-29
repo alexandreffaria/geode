@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import type {
   Account,
   CreateAccountRequest,
@@ -18,6 +18,11 @@ export function useAccounts() {
     error,
     refetch,
   } = useResource<Account[]>(fetchAccounts, []);
+
+  const mainAccount = useMemo(
+    () => accounts.find((a) => a.is_main) ?? null,
+    [accounts],
+  );
 
   const createAccount = useCallback(
     async (data: CreateAccountRequest): Promise<void> => {
@@ -43,13 +48,23 @@ export function useAccounts() {
     [refetch],
   );
 
+  const setMainAccount = useCallback(
+    async (name: string): Promise<void> => {
+      await apiService.setMainAccount(name);
+      await refetch();
+    },
+    [refetch],
+  );
+
   return {
     accounts,
+    mainAccount,
     loading,
     error,
     refetch,
     createAccount,
     updateAccount,
     deleteAccount,
+    setMainAccount,
   };
 }

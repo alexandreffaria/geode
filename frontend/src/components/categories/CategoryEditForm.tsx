@@ -3,7 +3,7 @@ import { Avatar } from "../ui/Avatar";
 
 export interface CategoryEditFormState {
   name: string;
-  parentName: string;
+  parentId: string; // category ID of parent, or "" for top-level
   imageURL: string;
   gradientStart: string;
   gradientEnd: string;
@@ -64,9 +64,9 @@ export function CategoryEditForm({
         </div>
 
         <div className="form-group">
-          <label htmlFor={`edit-name-${category.name}`}>Name</label>
+          <label htmlFor={`edit-name-${category.id}`}>Name</label>
           <input
-            id={`edit-name-${category.name}`}
+            id={`edit-name-${category.id}`}
             type="text"
             value={form.name}
             onChange={(e) => onChange("name", e.target.value)}
@@ -76,18 +76,16 @@ export function CategoryEditForm({
         </div>
 
         <div className="form-group">
-          <label htmlFor={`edit-parent-${category.name}`}>
-            Parent Category
-          </label>
+          <label htmlFor={`edit-parent-${category.id}`}>Parent Category</label>
           <select
-            id={`edit-parent-${category.name}`}
-            value={form.parentName}
-            onChange={(e) => onChange("parentName", e.target.value)}
+            id={`edit-parent-${category.id}`}
+            value={form.parentId}
+            onChange={(e) => onChange("parentId", e.target.value)}
             disabled={saving}
           >
             <option value="">None (top-level)</option>
             {parentOptions.map((c) => (
-              <option key={c.name} value={c.name}>
+              <option key={c.id} value={c.id}>
                 {c.name}
               </option>
             ))}
@@ -95,9 +93,9 @@ export function CategoryEditForm({
         </div>
 
         <div className="form-group">
-          <label htmlFor={`edit-image-${category.name}`}>Image URL</label>
+          <label htmlFor={`edit-image-${category.id}`}>Image URL</label>
           <input
-            id={`edit-image-${category.name}`}
+            id={`edit-image-${category.id}`}
             type="text"
             value={form.imageURL}
             onChange={(e) => onChange("imageURL", e.target.value)}
@@ -107,12 +105,12 @@ export function CategoryEditForm({
         </div>
 
         <div className="form-group form-group--color">
-          <label htmlFor={`edit-grad-start-${category.name}`}>
+          <label htmlFor={`edit-grad-start-${category.id}`}>
             Gradient Start
           </label>
           <div className="color-input-wrapper">
             <input
-              id={`edit-grad-start-${category.name}`}
+              id={`edit-grad-start-${category.id}`}
               type="color"
               value={form.gradientStart}
               onChange={(e) => onChange("gradientStart", e.target.value)}
@@ -123,10 +121,10 @@ export function CategoryEditForm({
         </div>
 
         <div className="form-group form-group--color">
-          <label htmlFor={`edit-grad-end-${category.name}`}>Gradient End</label>
+          <label htmlFor={`edit-grad-end-${category.id}`}>Gradient End</label>
           <div className="color-input-wrapper">
             <input
-              id={`edit-grad-end-${category.name}`}
+              id={`edit-grad-end-${category.id}`}
               type="color"
               value={form.gradientEnd}
               onChange={(e) => onChange("gradientEnd", e.target.value)}

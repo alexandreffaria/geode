@@ -78,6 +78,39 @@ func (h *TransactionHandler) GetTransactionByID(w http.ResponseWriter, r *http.R
 	WriteJSON(w, http.StatusOK, transaction)
 }
 
+// UpdateRecurringGroup handles PUT /api/transactions/group/:group_id
+// It updates all transactions that share the given recurrence_group_id.
+func (h *TransactionHandler) UpdateRecurringGroup(w http.ResponseWriter, r *http.Request) {
+	// Extract group_id from URL: /api/transactions/group/<group_id>
+	const prefix = "/api/transactions/group/"
+	groupID := r.URL.Path[len(prefix):]
+	if groupID == "" {
+		WriteError(w, http.StatusBadRequest, "Group ID required")
+		return
+	}
+
+	var updatedTransaction models.Transaction
+	if err := json.NewDecoder(r.Body).Decode(&updatedTransaction); err != nil {
+		log.Printf("Error decoding transaction: %v", err)
+		WriteError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	results, err := h.ledger.UpdateRecurringGroup(groupID, &updatedTransaction)
+	if err != nil {
+		log.Printf("Error updating recurring group %s: %v", groupID, err)
+		if err.Error() == "no transactions found for group: "+groupID {
+			WriteError(w, http.StatusNotFound, err.Error())
+		} else {
+			WriteError(w, http.StatusBadRequest, err.Error())
+		}
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, results)
+	log.Printf("Recurring group updated: %s (%d transactions)", groupID, len(results))
+}
+
 // UpdateTransaction handles PUT /api/transactions/:id
 func (h *TransactionHandler) UpdateTransaction(w http.ResponseWriter, r *http.Request) {
 	// Extract ID from URL

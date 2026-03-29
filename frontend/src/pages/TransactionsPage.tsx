@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import type { Account, Category, Transaction } from "../types";
+import { resolveCategoryName } from "../utils/transactionUtils";
 import { TransactionList } from "../components/TransactionList";
 import "./TransactionsPage.css";
 
@@ -70,6 +71,7 @@ function getTransactionCategory(t: Transaction): string {
 function applyFilters(
   transactions: Transaction[],
   filters: FilterState,
+  categories: Category[],
 ): Transaction[] {
   return transactions.filter((t) => {
     // Date range
@@ -90,10 +92,15 @@ function applyFilters(
     // Search
     if (filters.searchQuery) {
       const q = filters.searchQuery.toLowerCase();
+      // Resolve category UUID → display name so users can search by category name
+      const categoryId = getTransactionCategory(t);
+      const categoryName = categoryId
+        ? resolveCategoryName(categoryId, categories)
+        : "";
       const searchable = [
         t.description ?? "",
         ...getTransactionAccounts(t),
-        getTransactionCategory(t),
+        categoryName,
         String(t.amount),
       ]
         .join(" ")
@@ -175,8 +182,8 @@ export function TransactionsPage({
   }, []);
 
   const filteredTransactions = useMemo(
-    () => applyFilters(transactions, filters),
-    [transactions, filters],
+    () => applyFilters(transactions, filters, categories),
+    [transactions, filters, categories],
   );
 
   // Unique account names from all transactions
@@ -191,15 +198,22 @@ export function TransactionsPage({
     return Array.from(names).sort((a, b) => a.localeCompare(b));
   }, [transactions]);
 
-  // Category options — only those that appear in transactions
+  // Category options — only those that appear in transactions, resolved to names for display
+  // The filter value is the category ID (stored in transactions)
   const categoryOptions = useMemo(() => {
-    const names = new Set<string>();
+    const ids = new Set<string>();
     for (const t of transactions) {
       const cat = getTransactionCategory(t);
-      if (cat) names.add(cat);
+      if (cat) ids.add(cat);
     }
-    return Array.from(names).sort((a, b) => a.localeCompare(b));
-  }, [transactions]);
+    // Map IDs to {id, name} for display, sorted by name
+    return Array.from(ids)
+      .map((id) => {
+        const found = categories.find((c) => c.id === id);
+        return { id, name: found?.name ?? id };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [transactions, categories]);
 
   // Determine which preset is currently active (for button highlighting)
   const activePreset = useMemo(() => {
@@ -230,11 +244,11 @@ export function TransactionsPage({
     return null;
   }, [filters.startDate, filters.endDate]);
 
-  // Category type lookup for display
+  // Category type lookup for display (keyed by ID)
   const categoryTypeMap = useMemo(() => {
     const map: Record<string, "income" | "expense"> = {};
     for (const c of categories) {
-      map[c.name] = c.type;
+      map[c.id] = c.type;
     }
     return map;
   }, [categories]);
@@ -344,10 +358,10 @@ export function TransactionsPage({
             onChange={(e) => setFilter("selectedCategory", e.target.value)}
           >
             <option value="">All Categories</option>
-            {categoryOptions.map((name) => (
-              <option key={name} value={name}>
+            {categoryOptions.map(({ id, name }) => (
+              <option key={id} value={id}>
                 {name}
-                {categoryTypeMap[name] ? ` (${categoryTypeMap[name]})` : ""}
+                {categoryTypeMap[id] ? ` (${categoryTypeMap[id]})` : ""}
               </option>
             ))}
           </select>
@@ -401,6 +415,7 @@ export function TransactionsPage({
       <div className="transactions-results">
         <TransactionList
           transactions={filteredTransactions}
+          categories={categories}
           onEditTransaction={onEditTransaction}
           onDeleteTransaction={onDeleteTransaction}
         />

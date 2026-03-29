@@ -104,6 +104,25 @@ class ApiService {
     return this.handleResponse<Transaction>(response);
   }
 
+  async updateRecurringGroup(
+    groupId: string,
+    data: TransactionFormData,
+  ): Promise<Transaction[]> {
+    const payload = buildTransactionPayload(data);
+
+    const response = await fetch(
+      `${API_BASE_URL}/transactions/group/${groupId}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      },
+    );
+    return this.handleResponse<Transaction[]>(response);
+  }
+
   async deleteTransaction(id: string): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/transactions/${id}`, {
       method: "DELETE",
@@ -154,42 +173,71 @@ class ApiService {
     return this.handleVoidResponse(response);
   }
 
+  async setMainAccount(name: string): Promise<Account[]> {
+    const response = await fetch(
+      `${API_BASE_URL}/accounts/${encodeURIComponent(name)}/main`,
+      {
+        method: "PUT",
+      },
+    );
+    return this.handleResponse<Account[]>(response);
+  }
+
   async getCategories(): Promise<Category[]> {
     const response = await fetch(`${API_BASE_URL}/categories`);
     return this.handleResponse<Category[]>(response);
   }
 
   async createCategory(data: CreateCategoryRequest): Promise<Category> {
+    // Map frontend field names to backend JSON field names
+    const payload: Record<string, unknown> = {
+      name: data.name,
+      type: data.type,
+      parent_id: data.parent_id ?? null,
+      gradient_start: data.gradientStart ?? "",
+      gradient_end: data.gradientEnd ?? "",
+      image_url: data.imageURL ?? "",
+    };
     const response = await fetch(`${API_BASE_URL}/categories`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     });
     return this.handleResponse<Category>(response);
   }
 
   async updateCategory(
-    name: string,
+    id: string,
     data: UpdateCategoryRequest,
   ): Promise<Category> {
+    // Map frontend field names to backend JSON field names
+    const payload: Record<string, unknown> = {};
+    if (data.name !== undefined) payload.name = data.name;
+    if (data.type !== undefined) payload.type = data.type;
+    if ("parent_id" in data) payload.parent_id = data.parent_id ?? null;
+    if (data.gradientStart !== undefined)
+      payload.gradient_start = data.gradientStart;
+    if (data.gradientEnd !== undefined) payload.gradient_end = data.gradientEnd;
+    if (data.imageURL !== undefined) payload.image_url = data.imageURL;
+
     const response = await fetch(
-      `${API_BASE_URL}/categories/${encodeURIComponent(name)}`,
+      `${API_BASE_URL}/categories/${encodeURIComponent(id)}`,
       {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       },
     );
     return this.handleResponse<Category>(response);
   }
 
-  async deleteCategory(name: string): Promise<void> {
+  async deleteCategory(id: string): Promise<void> {
     const response = await fetch(
-      `${API_BASE_URL}/categories/${encodeURIComponent(name)}`,
+      `${API_BASE_URL}/categories/${encodeURIComponent(id)}`,
       {
         method: "DELETE",
       },

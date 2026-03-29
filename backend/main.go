@@ -105,6 +105,25 @@ func registerRoutes(mux *http.ServeMux, h *Handlers) {
 		middleware.Logger,
 	))
 
+	// PUT /api/transactions/group/:group_id — must be registered BEFORE /api/transactions/
+	// so that Go's prefix-matching ServeMux routes it to the more specific handler.
+	mux.HandleFunc("/api/transactions/group/", middleware.Chain(
+		func(w http.ResponseWriter, r *http.Request) {
+			groupID := r.URL.Path[len("/api/transactions/group/"):]
+			if groupID == "" {
+				handlers.WriteError(w, http.StatusBadRequest, "Group ID required")
+				return
+			}
+			if r.Method == http.MethodPut {
+				h.transactions.UpdateRecurringGroup(w, r)
+			} else {
+				handlers.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
+			}
+		},
+		middleware.CORS,
+		middleware.Logger,
+	))
+
 	mux.HandleFunc("/api/transactions/", middleware.Chain(
 		func(w http.ResponseWriter, r *http.Request) {
 			// Check if it's a specific transaction (has ID)
@@ -145,6 +164,20 @@ func registerRoutes(mux *http.ServeMux, h *Handlers) {
 		middleware.Logger,
 	))
 
+	// GET /api/accounts/main — must be registered BEFORE the generic /api/accounts/ handler
+	// to avoid the "main" literal being treated as an account name.
+	mux.HandleFunc("/api/accounts/main", middleware.Chain(
+		func(w http.ResponseWriter, r *http.Request) {
+			if r.Method == http.MethodGet {
+				h.accounts.GetMainAccount(w, r)
+			} else {
+				handlers.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
+			}
+		},
+		middleware.CORS,
+		middleware.Logger,
+	))
+
 	mux.HandleFunc("/api/accounts/", middleware.Chain(
 		func(w http.ResponseWriter, r *http.Request) {
 			path := r.URL.Path[len("/api/accounts/"):]
@@ -167,6 +200,16 @@ func registerRoutes(mux *http.ServeMux, h *Handlers) {
 			if strings.HasSuffix(path, "/pay-bill") {
 				if r.Method == http.MethodPost {
 					h.accounts.PayBill(w, r)
+				} else {
+					handlers.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
+				}
+				return
+			}
+
+			// Route: PUT /api/accounts/:name/main
+			if strings.HasSuffix(path, "/main") {
+				if r.Method == http.MethodPut {
+					h.accounts.SetMainAccount(w, r)
 				} else {
 					handlers.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
 				}
@@ -207,14 +250,14 @@ func registerRoutes(mux *http.ServeMux, h *Handlers) {
 
 	mux.HandleFunc("/api/categories/", middleware.Chain(
 		func(w http.ResponseWriter, r *http.Request) {
-			name := r.URL.Path[len("/api/categories/"):]
-			if name == "" {
-				handlers.WriteError(w, http.StatusBadRequest, "Category name required")
+			id := r.URL.Path[len("/api/categories/"):]
+			if id == "" {
+				handlers.WriteError(w, http.StatusBadRequest, "Category ID required")
 				return
 			}
 			switch r.Method {
 			case http.MethodGet:
-				h.categories.GetCategoryByName(w, r)
+				h.categories.GetCategoryByID(w, r)
 			case http.MethodPut:
 				h.categories.UpdateCategory(w, r)
 			case http.MethodDelete:

@@ -4,3 +4,132 @@
    .modal-header, .modal-title, .modal-close-button, .modal-body)
    are defined in src/styles/modal-base.css (imported via index.css).
    ============================================================ */
+
+/* ============================================================
+   Recurring Edit Confirmation Dialog
+   Replaces the form content inside .modal-body when the user
+   submits an edit on a recurring transaction.
+   ============================================================ */
+
+.recurring-dialog {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 8px 0 4px;
+  gap: 0;
+}
+
+.recurring-dialog__icon {
+  font-size: 2.5rem;
+  line-height: 1;
+  margin-bottom: 16px;
+}
+
+.recurring-dialog__title {
+  margin: 0 0 10px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-primary, #e0e0e0);
+}
+
+.recurring-dialog__question {
+  margin: 0 0 28px;
+  font-size: 0.95rem;
+  color: var(--text-secondary, #b0b0b0);
+  line-height: 1.5;
+  max-width: 380px;
+}
+
+.recurring-dialog__error {
+  width: 100%;
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+/* Action buttons — stacked vertically, full-width */
+.recurring-dialog__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 320px;
+  margin-bottom: 20px;
+}
+
+.recurring-dialog__btn {
+  width: 100%;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    opacity 0.2s;
+}
+
+.recurring-dialog__btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Primary — "Just this one" */
+.recurring-dialog__btn--primary {
+  background: var(--accent-blue, #4a9eff);
+  color: #fff;
+}
+
+.recurring-dialog__btn--primary:hover:not(:disabled) {
+  background: var(--accent-blue-hover, #3a8eef);
+}
+
+.recurring-dialog__btn--primary:focus {
+  outline: 2px solid var(--accent-blue, #4a9eff);
+  outline-offset: 2px;
+}
+
+/* Secondary — "All in series" */
+.recurring-dialog__btn--secondary {
+  background: var(--bg-tertiary, #2a2a2a);
+  color: var(--text-primary, #e0e0e0);
+  border: 1px solid var(--border-color, #3a3a3a);
+}
+
+.recurring-dialog__btn--secondary:hover:not(:disabled) {
+  background: var(--bg-hover, #333333);
+}
+
+.recurring-dialog__btn--secondary:focus {
+  outline: 2px solid var(--accent-blue, #4a9eff);
+  outline-offset: 2px;
+}
+
+/* Cancel link-style button */
+.recurring-dialog__cancel {
+  background: none;
+  border: none;
+  color: var(--text-secondary, #b0b0b0);
+  font-size: 0.875rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.2s;
+}
+
+.recurring-dialog__cancel:hover:not(:disabled) {
+  color: var(--text-primary, #e0e0e0);
+}
+
+.recurring-dialog__cancel:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.recurring-dialog__cancel:focus {
+  outline: 2px solid var(--accent-blue, #4a9eff);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
