@@ -199,3 +199,23 @@
   margin-top: 4px;
   align-self: flex-start;
 }
+
+/* ── Virtual transaction info banner ── */
+.virtual-info-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(74, 158, 255, 0.08);
+  border: 1px solid rgba(74, 158, 255, 0.25);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  color: var(--text-secondary, #b0b0b0);
+  margin-bottom: 4px;
+}
+
+.virtual-info-icon {
+  font-size: 1rem;
+  line-height: 1.4;
+  flex-shrink: 0;
+}

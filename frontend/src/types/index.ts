@@ -8,7 +8,7 @@ export interface InstallmentSchedule {
   months: number; // number of installments (>= 2)
 }
 
-export type RecurrenceUnit = "week" | "month";
+export type RecurrenceUnit = "day" | "week" | "month";
 
 export interface RecurringSchedule {
   mode: "recurring";
@@ -38,6 +38,8 @@ interface BaseTransaction {
   // Credit card fields
   paid?: boolean | null;
   credit_card_bill_month?: string | null;
+  // Virtual transaction flag
+  is_virtual?: boolean | null;
 }
 
 // Purchase: money leaves account, goes to category

@@ -261,6 +261,20 @@ export function TransactionForm({
 
   return (
     <form onSubmit={handleSubmit} className="transaction-form">
+      {/* Virtual transaction info banner — shown in edit mode only */}
+      {isEditMode && initialTransaction?.is_virtual && (
+        <div className="virtual-info-banner">
+          <span className="virtual-info-icon" aria-hidden="true">
+            🔮
+          </span>
+          <span>
+            This is a <strong>projected transaction</strong>. It does not affect
+            your account balance. Use the "👍 Realize" button in the list to
+            convert it to a real transaction.
+          </span>
+        </div>
+      )}
+
       {/* 1. Type toggle buttons */}
       <div className="type-toggle-group">
         {TYPE_BUTTONS.map(({ type, label, icon, modifier }) => (

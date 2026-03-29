@@ -19,6 +19,8 @@ function App() {
     loading: transactionsLoading,
     error: transactionsError,
     refetch: refetchTransactions,
+    realizeTransaction,
+    unrealizeTransaction,
   } = useTransactions();
 
   const {
@@ -94,6 +96,36 @@ function App() {
     [refetchData],
   );
 
+  // ── Realize transaction (virtual → real) ────────────────────────────────────
+  const handleRealizeTransaction = useCallback(
+    async (transaction: Transaction) => {
+      try {
+        await realizeTransaction(transaction.id);
+        // realizeTransaction already updates local state optimistically;
+        // also refresh accounts since balances change on realize
+        await refetchAccounts();
+      } catch (err) {
+        console.error("Failed to realize transaction:", err);
+      }
+    },
+    [realizeTransaction, refetchAccounts],
+  );
+
+  // ── Unrealize transaction (real → virtual) ───────────────────────────────────
+  const handleUnrealizeTransaction = useCallback(
+    async (transaction: Transaction) => {
+      try {
+        await unrealizeTransaction(transaction.id);
+        // unrealizeTransaction already updates local state optimistically;
+        // also refresh accounts since balances change on unrealize
+        await refetchAccounts();
+      } catch (err) {
+        console.error("Failed to unrealize transaction:", err);
+      }
+    },
+    [unrealizeTransaction, refetchAccounts],
+  );
+
   // ── Account/Category modal state ────────────────────────────────────────────
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -167,6 +199,8 @@ function App() {
                 onAddTransaction={openAddModal}
                 onEditTransaction={openEditModal}
                 onDeleteTransaction={handleDeleteTransaction}
+                onRealizeTransaction={handleRealizeTransaction}
+                onUnrealizeTransaction={handleUnrealizeTransaction}
               />
             }
           />

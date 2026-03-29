@@ -88,6 +88,13 @@ type Transaction struct {
 	Paid                *bool   `json:"paid,omitempty"`
 	// CreditCardBillMonth links a transaction to a specific credit card billing month (format: "YYYY-MM").
 	CreditCardBillMonth *string `json:"credit_card_bill_month,omitempty"`
+
+	// Virtual transaction support
+	// IsVirtual: true = projected/forecast entry, does NOT affect account balances.
+	// Virtual transactions are auto-generated for recurring series (10-year horizon).
+	// They are excluded from balance calculations and can be "realized" via POST /api/transactions/:id/realize.
+	// nil means "not virtual" (i.e., a real transaction) — backward-compatible with existing records.
+	IsVirtual *bool `json:"is_virtual,omitempty"`
 }
 
 // Validate checks if the transaction is valid
@@ -117,8 +124,8 @@ func (t *Transaction) Validate() error {
 	}
 	if t.RecurrenceUnit != nil {
 		unit := *t.RecurrenceUnit
-		if unit != "week" && unit != "month" {
-			return errors.New("recurrence_unit must be \"week\" or \"month\"")
+		if unit != "day" && unit != "week" && unit != "month" {
+			return errors.New("recurrence_unit must be \"day\", \"week\", or \"month\"")
 		}
 	}
 

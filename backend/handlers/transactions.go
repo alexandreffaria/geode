@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/meulindo/geode/backend/models"
 	"github.com/meulindo/geode/backend/services"
@@ -171,4 +172,56 @@ func (h *TransactionHandler) DeleteTransaction(w http.ResponseWriter, r *http.Re
 	// Return 204 No Content on success
 	w.WriteHeader(http.StatusNoContent)
 	log.Printf("Transaction deleted: %s", id)
+}
+
+// RealizeTransaction handles POST /api/transactions/:id/realize
+// It converts a virtual (projected) transaction into a real one, applying its balance effect.
+func (h *TransactionHandler) RealizeTransaction(w http.ResponseWriter, r *http.Request) {
+	// Extract ID from path: /api/transactions/<id>/realize
+	path := r.URL.Path[len("/api/transactions/"):]
+	id := strings.TrimSuffix(path, "/realize")
+	if id == "" || id == path {
+		WriteError(w, http.StatusBadRequest, "Transaction ID required")
+		return
+	}
+
+	result, err := h.ledger.RealizeTransaction(id)
+	if err != nil {
+		log.Printf("Error realizing transaction %s: %v", id, err)
+		if errors.Is(err, services.ErrTransactionNotFound) {
+			WriteError(w, http.StatusNotFound, err.Error())
+		} else {
+			WriteError(w, http.StatusBadRequest, err.Error())
+		}
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, result)
+	log.Printf("Transaction realized: %s", id)
+}
+
+// UnrealizeTransaction handles POST /api/transactions/:id/unrealize
+// It converts a real transaction back to virtual (projected), reversing its balance effect.
+func (h *TransactionHandler) UnrealizeTransaction(w http.ResponseWriter, r *http.Request) {
+	// Extract ID from path: /api/transactions/<id>/unrealize
+	path := r.URL.Path[len("/api/transactions/"):]
+	id := strings.TrimSuffix(path, "/unrealize")
+	if id == "" || id == path {
+		WriteError(w, http.StatusBadRequest, "Transaction ID required")
+		return
+	}
+
+	result, err := h.ledger.UnrealizeTransaction(id)
+	if err != nil {
+		log.Printf("Error unrealizing transaction %s: %v", id, err)
+		if errors.Is(err, services.ErrTransactionNotFound) {
+			WriteError(w, http.StatusNotFound, err.Error())
+		} else {
+			WriteError(w, http.StatusBadRequest, err.Error())
+		}
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, result)
+	log.Printf("Transaction unrealized: %s", id)
 }

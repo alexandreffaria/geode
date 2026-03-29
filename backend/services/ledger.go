@@ -61,6 +61,14 @@ func (s *LedgerService) CreateTransaction(transaction *models.Transaction) ([]*m
 	if err != nil {
 		return nil, err
 	}
+
+	// Auto-generate 10 years of virtual transactions for recurring series (best-effort)
+	if transaction.RecurrenceMonths != nil && transaction.InstallmentTotal == nil {
+		if err := s.generateVirtualRecurring(saved); err != nil {
+			log.Printf("WARN: failed to generate virtual recurring for %s: %v", saved.ID, err)
+		}
+	}
+
 	return []*models.Transaction{saved}, nil
 }
 
@@ -168,11 +176,21 @@ func isUnpaid(transaction *models.Transaction) bool {
 	return transaction.Paid != nil && !*transaction.Paid
 }
 
+// isVirtual returns true if the transaction has IsVirtual explicitly set to true.
+// Virtual transactions are projected/forecast entries that do not affect account balances.
+func isVirtual(transaction *models.Transaction) bool {
+	return transaction.IsVirtual != nil && *transaction.IsVirtual
+}
+
 // updateAccountBalances updates the balances of accounts affected by a transaction.
 // Transactions with Paid == false (unpaid/pending) are skipped — they do not affect balances.
 func (s *LedgerService) updateAccountBalances(transaction *models.Transaction) error {
 	// Unpaid transactions do not affect balances
 	if isUnpaid(transaction) {
+		return nil
+	}
+	// Virtual transactions do not affect account balances
+	if isVirtual(transaction) {
 		return nil
 	}
 
@@ -220,6 +238,10 @@ func (s *LedgerService) updateAccountBalances(transaction *models.Transaction) e
 func (s *LedgerService) reverseAccountBalances(transaction *models.Transaction) error {
 	// Unpaid transactions never affected balances, so nothing to reverse
 	if isUnpaid(transaction) {
+		return nil
+	}
+	// Virtual transactions never affected balances, so nothing to reverse
+	if isVirtual(transaction) {
 		return nil
 	}
 
@@ -339,6 +361,9 @@ func (s *LedgerService) UpdateRecurringGroup(groupID string, updated *models.Tra
 			Date:              original.Date,
 			RecurrenceGroupID: original.RecurrenceGroupID,
 
+			// Preserve virtual flag from original — do NOT overwrite virtual entries
+			IsVirtual: original.IsVirtual,
+
 			// Installment metadata — preserve if present on the original
 			InstallmentTotal:   original.InstallmentTotal,
 			InstallmentCurrent: original.InstallmentCurrent,
@@ -418,6 +443,139 @@ func (s *LedgerService) DeleteTransaction(id string) error {
 	}
 
 	return nil
+}
+
+// generateVirtualRecurring creates virtual future instances of a recurring transaction
+// for a 10-year horizon. The anchor transaction (already saved) is the first real entry.
+// Virtual transactions share the same RecurrenceGroupID and have IsVirtual = true.
+func (s *LedgerService) generateVirtualRecurring(anchor *models.Transaction) error {
+	if anchor.RecurrenceGroupID == nil || anchor.RecurrenceMonths == nil {
+		return nil
+	}
+
+	isVirtualTrue := true
+	interval := *anchor.RecurrenceMonths
+	recurrenceUnit := "month"
+	if anchor.RecurrenceUnit != nil {
+		recurrenceUnit = *anchor.RecurrenceUnit
+	}
+
+	// 10-year horizon from the anchor date
+	horizon := anchor.Date.Time.AddDate(10, 0, 0)
+	current := anchor.Date.Time
+
+	for {
+		// Advance by the recurrence interval
+		switch recurrenceUnit {
+		case "day":
+			current = current.AddDate(0, 0, interval)
+		case "week":
+			current = current.AddDate(0, 0, interval*7)
+		default: // "month"
+			current = current.AddDate(0, interval, 0)
+		}
+		if current.After(horizon) {
+			break
+		}
+
+		t := &models.Transaction{
+			ID:   uuid.New().String(),
+			Date: models.Date{Time: current},
+
+			Type:        anchor.Type,
+			Amount:      anchor.Amount,
+			Description: anchor.Description,
+			Account:     anchor.Account,
+			Category:    anchor.Category,
+			FromAccount: anchor.FromAccount,
+			ToAccount:   anchor.ToAccount,
+
+			RecurrenceMonths:  anchor.RecurrenceMonths,
+			RecurrenceUnit:    anchor.RecurrenceUnit,
+			RecurrenceGroupID: anchor.RecurrenceGroupID,
+
+			IsVirtual: &isVirtualTrue,
+		}
+
+		// saveSingleTransaction skips balance updates for virtual (via isVirtual guard)
+		if _, err := s.saveSingleTransaction(t); err != nil {
+			return fmt.Errorf("failed to save virtual transaction at %s: %w",
+				current.Format("2006-01-02"), err)
+		}
+	}
+	return nil
+}
+
+// RealizeTransaction converts a virtual transaction into a real one.
+// It clears IsVirtual, then applies the balance change that was previously skipped.
+// Returns the updated transaction.
+func (s *LedgerService) RealizeTransaction(id string) (*models.Transaction, error) {
+	t, err := s.storage.GetTransactionByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if t == nil {
+		return nil, ErrTransactionNotFound
+	}
+	if !isVirtual(t) {
+		return nil, errors.New("transaction is not virtual")
+	}
+
+	// Clear the virtual flag — transaction becomes real
+	t.IsVirtual = nil
+
+	// Now apply balance changes (previously skipped because it was virtual)
+	if err := s.updateAccountBalances(t); err != nil {
+		return nil, fmt.Errorf("failed to apply balances on realize: %w", err)
+	}
+
+	// Persist the realized transaction
+	if err := s.storage.UpdateTransaction(t); err != nil {
+		// Rollback balance change
+		if rbErr := s.reverseAccountBalances(t); rbErr != nil {
+			log.Printf("CRITICAL: rollback failed for realize %s: %v", id, rbErr)
+		}
+		return nil, err
+	}
+
+	return t, nil
+}
+
+// UnrealizeTransaction converts a real transaction back to virtual.
+// It sets IsVirtual = true, then reverses the balance change that was previously applied.
+// Returns the updated transaction.
+func (s *LedgerService) UnrealizeTransaction(id string) (*models.Transaction, error) {
+	t, err := s.storage.GetTransactionByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if t == nil {
+		return nil, ErrTransactionNotFound
+	}
+	if isVirtual(t) {
+		return nil, errors.New("transaction is already virtual")
+	}
+
+	// Reverse the balance changes that were applied when this transaction was real
+	if err := s.reverseAccountBalances(t); err != nil {
+		return nil, fmt.Errorf("failed to reverse balances on unrealize: %w", err)
+	}
+
+	// Mark as virtual
+	isVirtualTrue := true
+	t.IsVirtual = &isVirtualTrue
+
+	// Persist the unrealized transaction
+	if err := s.storage.UpdateTransaction(t); err != nil {
+		// Rollback: re-apply the balance change
+		t.IsVirtual = nil
+		if rbErr := s.updateAccountBalances(t); rbErr != nil {
+			log.Printf("CRITICAL: rollback failed for unrealize %s: %v", id, rbErr)
+		}
+		return nil, err
+	}
+
+	return t, nil
 }
 
 // adjustAccountBalance adjusts an account's balance by the given amount
@@ -766,6 +924,11 @@ func (s *LedgerService) GetCreditCardBills(accountName string) ([]*models.Credit
 	monthPaid := map[string]float64{}
 
 	for _, t := range allTransactions {
+		// Skip virtual transactions — they don't affect real balances
+		if isVirtual(t) {
+			continue
+		}
+
 		// Purchase transactions on this credit card account
 		if t.Type == models.TransactionTypePurchase && t.Account != nil && *t.Account == accountName {
 			month := billMonth(t)

@@ -155,6 +155,23 @@ class ApiService {
     return this.handleVoidResponse(response);
   }
 
+  async realizeTransaction(id: string): Promise<Transaction> {
+    const response = await fetch(`${API_BASE_URL}/transactions/${id}/realize`, {
+      method: "POST",
+    });
+    return this.handleResponse<Transaction>(response);
+  }
+
+  async unrealizeTransaction(id: string): Promise<Transaction> {
+    const response = await fetch(
+      `${API_BASE_URL}/transactions/${id}/unrealize`,
+      {
+        method: "POST",
+      },
+    );
+    return this.handleResponse<Transaction>(response);
+  }
+
   async getAccounts(): Promise<Account[]> {
     const response = await fetch(`${API_BASE_URL}/accounts`);
     return this.handleResponse<Account[]>(response);

@@ -192,6 +192,26 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
+.account-card--clickable {
+  cursor: pointer;
+}
+
+.account-card--clickable:hover {
+  border-color: var(--accent-blue);
+  box-shadow: 0 6px 18px rgba(74, 158, 255, 0.18);
+  transform: translateY(-2px);
+}
+
+.account-card--clickable:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(74, 158, 255, 0.15);
+}
+
+.account-card--clickable:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
 .account-card-header {
   display: flex;
   align-items: center;
@@ -245,9 +265,10 @@
   border-color: rgba(74, 158, 255, 0.3);
 }
 
-.account-card--credit-dashboard:hover {
+.account-card--credit-dashboard.account-card--clickable:hover {
   border-color: var(--accent-blue);
-  box-shadow: 0 4px 12px rgba(74, 158, 255, 0.2);
+  box-shadow: 0 6px 18px rgba(74, 158, 255, 0.25);
+  transform: translateY(-2px);
 }
 
 /* ── Credit limit progress bar ── */

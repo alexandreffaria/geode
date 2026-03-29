@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import type { Account, Category, Transaction } from "../types";
 import { resolveCategoryName } from "../utils/transactionUtils";
 import { TransactionList } from "../components/TransactionList";
@@ -11,6 +12,8 @@ interface TransactionsPageProps {
   onAddTransaction: () => void;
   onEditTransaction: (transaction: Transaction) => void;
   onDeleteTransaction: (transaction: Transaction) => void;
+  onRealizeTransaction: (transaction: Transaction) => void;
+  onUnrealizeTransaction: (transaction: Transaction) => void;
 }
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
@@ -43,6 +46,7 @@ interface FilterState {
   selectedAccount: string; // "" = all
   selectedCategory: string; // "" = all
   searchQuery: string;
+  showVirtual: boolean; // default false — virtual transactions hidden by default
 }
 
 function getDefaultFilters(): FilterState {
@@ -53,6 +57,7 @@ function getDefaultFilters(): FilterState {
     selectedAccount: "",
     selectedCategory: "",
     searchQuery: "",
+    showVirtual: false,
   };
 }
 
@@ -74,6 +79,9 @@ function applyFilters(
   categories: Category[],
 ): Transaction[] {
   return transactions.filter((t) => {
+    // Virtual filter: hide virtual transactions unless showVirtual is true
+    if (!filters.showVirtual && t.is_virtual === true) return false;
+
     // Date range
     if (filters.startDate && t.date < filters.startDate) return false;
     if (filters.endDate && t.date > filters.endDate) return false;
@@ -112,6 +120,36 @@ function applyFilters(
   });
 }
 
+// ── localStorage helpers ──────────────────────────────────────────────────────
+
+const LS_PREFIX = "txpage_";
+
+function lsGet(key: string, fallback: string): string {
+  try {
+    const v = localStorage.getItem(LS_PREFIX + key);
+    return v !== null ? v : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function lsGetBool(key: string, fallback: boolean): boolean {
+  try {
+    const v = localStorage.getItem(LS_PREFIX + key);
+    return v !== null ? v === "true" : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function lsSet(key: string, value: string): void {
+  try {
+    localStorage.setItem(LS_PREFIX + key, value);
+  } catch {
+    // ignore quota errors
+  }
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function TransactionsPage({
@@ -121,12 +159,114 @@ export function TransactionsPage({
   onAddTransaction,
   onEditTransaction,
   onDeleteTransaction,
+  onRealizeTransaction,
+  onUnrealizeTransaction,
 }: TransactionsPageProps) {
-  const [filters, setFilters] = useState<FilterState>(getDefaultFilters);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const defaults = getDefaultFilters();
+
+  // Read URL query params (set when navigating from Dashboard account cards)
+  // These take priority over localStorage on initial mount.
+  const urlAccount = searchParams.get("account") ?? "";
+  const urlMonth = searchParams.get("month") ?? ""; // YYYY-MM
+
+  // Derive start/end dates from the ?month=YYYY-MM param if present
+  const urlStartDate = useMemo(() => {
+    if (!urlMonth) return "";
+    const [year, month] = urlMonth.split("-").map(Number);
+    if (!year || !month) return "";
+    return getFirstDayOfMonth(new Date(year, month - 1, 1));
+  }, [urlMonth]);
+
+  const urlEndDate = useMemo(() => {
+    if (!urlMonth) return "";
+    const [year, month] = urlMonth.split("-").map(Number);
+    if (!year || !month) return "";
+    return getLastDayOfMonth(new Date(year, month - 1, 1));
+  }, [urlMonth]);
+
+  // Per-field state: URL params take priority over localStorage, which falls back to defaults
+  const [startDate, setStartDate] = useState<string>(
+    () => urlStartDate || lsGet("startDate", defaults.startDate),
+  );
+  const [endDate, setEndDate] = useState<string>(
+    () => urlEndDate || lsGet("endDate", defaults.endDate),
+  );
+  const [selectedAccount, setSelectedAccount] = useState<string>(
+    () => urlAccount || lsGet("selectedAccount", defaults.selectedAccount),
+  );
+  const [selectedCategory, setSelectedCategory] = useState<string>(() =>
+    lsGet("selectedCategory", defaults.selectedCategory),
+  );
+  const [searchQuery, setSearchQuery] = useState<string>(() =>
+    lsGet("searchQuery", defaults.searchQuery),
+  );
+  const [showVirtual, setShowVirtual] = useState<boolean>(() =>
+    lsGetBool("showVirtual", defaults.showVirtual),
+  );
+
+  // Once URL params have been consumed into state, clear them from the URL
+  // so that subsequent filter changes don't conflict with stale params.
+  useEffect(() => {
+    if (urlAccount || urlMonth) {
+      setSearchParams({}, { replace: true });
+    }
+    // Only run on mount — intentionally omitting deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist each field to localStorage whenever it changes
+  useEffect(() => {
+    lsSet("startDate", startDate);
+  }, [startDate]);
+  useEffect(() => {
+    lsSet("endDate", endDate);
+  }, [endDate]);
+  useEffect(() => {
+    lsSet("selectedAccount", selectedAccount);
+  }, [selectedAccount]);
+  useEffect(() => {
+    lsSet("selectedCategory", selectedCategory);
+  }, [selectedCategory]);
+  useEffect(() => {
+    lsSet("searchQuery", searchQuery);
+  }, [searchQuery]);
+  useEffect(() => {
+    lsSet("showVirtual", String(showVirtual));
+  }, [showVirtual]);
+
+  // Compose a FilterState object for the filter logic (no setState needed)
+  const filters: FilterState = {
+    startDate,
+    endDate,
+    selectedAccount,
+    selectedCategory,
+    searchQuery,
+    showVirtual,
+  };
 
   const setFilter = useCallback(
     <K extends keyof FilterState>(key: K, value: FilterState[K]) => {
-      setFilters((prev) => ({ ...prev, [key]: value }));
+      switch (key) {
+        case "startDate":
+          setStartDate(value as string);
+          break;
+        case "endDate":
+          setEndDate(value as string);
+          break;
+        case "selectedAccount":
+          setSelectedAccount(value as string);
+          break;
+        case "selectedCategory":
+          setSelectedCategory(value as string);
+          break;
+        case "searchQuery":
+          setSearchQuery(value as string);
+          break;
+        case "showVirtual":
+          setShowVirtual(value as boolean);
+          break;
+      }
     },
     [],
   );
@@ -136,19 +276,13 @@ export function TransactionsPage({
     const now = new Date();
     switch (preset) {
       case "this-month":
-        setFilters((prev) => ({
-          ...prev,
-          startDate: getFirstDayOfMonth(now),
-          endDate: getLastDayOfMonth(now),
-        }));
+        setStartDate(getFirstDayOfMonth(now));
+        setEndDate(getLastDayOfMonth(now));
         break;
       case "last-month": {
         const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        setFilters((prev) => ({
-          ...prev,
-          startDate: getFirstDayOfMonth(lastMonth),
-          endDate: getLastDayOfMonth(lastMonth),
-        }));
+        setStartDate(getFirstDayOfMonth(lastMonth));
+        setEndDate(getLastDayOfMonth(lastMonth));
         break;
       }
       case "last-3-months": {
@@ -157,26 +291,17 @@ export function TransactionsPage({
           now.getMonth() - 2,
           1,
         );
-        setFilters((prev) => ({
-          ...prev,
-          startDate: getFirstDayOfMonth(threeMonthsAgo),
-          endDate: getLastDayOfMonth(now),
-        }));
+        setStartDate(getFirstDayOfMonth(threeMonthsAgo));
+        setEndDate(getLastDayOfMonth(now));
         break;
       }
       case "this-year":
-        setFilters((prev) => ({
-          ...prev,
-          startDate: getFirstDayOfYear(now),
-          endDate: getLastDayOfYear(now),
-        }));
+        setStartDate(getFirstDayOfYear(now));
+        setEndDate(getLastDayOfYear(now));
         break;
       case "all-time":
-        setFilters((prev) => ({
-          ...prev,
-          startDate: "",
-          endDate: "",
-        }));
+        setStartDate("");
+        setEndDate("");
         break;
     }
   }, []);
@@ -185,6 +310,19 @@ export function TransactionsPage({
     () => applyFilters(transactions, filters, categories),
     [transactions, filters, categories],
   );
+
+  // Summary totals — NEVER include virtual transactions regardless of showVirtual
+  const summary = useMemo(() => {
+    let income = 0;
+    let expenses = 0;
+    for (const t of filteredTransactions) {
+      if (t.is_virtual === true) continue;
+      if (t.paid === false) continue;
+      if (t.type === "earning") income += t.amount;
+      else if (t.type === "purchase") expenses += t.amount;
+    }
+    return { income, expenses, net: income - expenses };
+  }, [filteredTransactions]);
 
   // Unique account names from all transactions
   const accountOptions = useMemo(() => {
@@ -257,9 +395,18 @@ export function TransactionsPage({
     filters.selectedAccount !== "" ||
     filters.selectedCategory !== "" ||
     filters.searchQuery !== "" ||
+    filters.showVirtual ||
     activePreset !== "this-month";
 
-  const resetFilters = () => setFilters(getDefaultFilters());
+  const resetFilters = () => {
+    const d = getDefaultFilters();
+    setStartDate(d.startDate);
+    setEndDate(d.endDate);
+    setSelectedAccount(d.selectedAccount);
+    setSelectedCategory(d.selectedCategory);
+    setSearchQuery(d.searchQuery);
+    setShowVirtual(d.showVirtual);
+  };
 
   return (
     <div className="transactions-page">
@@ -280,6 +427,31 @@ export function TransactionsPage({
           <span className="button-icon">+</span>
           Add Transaction
         </button>
+      </div>
+
+      {/* Summary bar — excludes virtual transactions */}
+      <div className="transactions-summary-bar">
+        <div className="summary-pill summary-pill--income">
+          <span className="summary-pill-label">Income</span>
+          <span className="summary-pill-value">
+            +{summary.income.toFixed(2)}
+          </span>
+        </div>
+        <div className="summary-pill summary-pill--expenses">
+          <span className="summary-pill-label">Expenses</span>
+          <span className="summary-pill-value">
+            -{summary.expenses.toFixed(2)}
+          </span>
+        </div>
+        <div
+          className={`summary-pill summary-pill--net ${summary.net >= 0 ? "summary-pill--net-positive" : "summary-pill--net-negative"}`}
+        >
+          <span className="summary-pill-label">Net</span>
+          <span className="summary-pill-value">
+            {summary.net >= 0 ? "+" : ""}
+            {summary.net.toFixed(2)}
+          </span>
+        </div>
       </div>
 
       {/* Filter bar */}
@@ -397,6 +569,18 @@ export function TransactionsPage({
           </div>
         </div>
 
+        {/* Show projected transactions toggle */}
+        <div className="filter-group filter-group--virtual">
+          <label className="filter-label filter-label--checkbox">
+            <input
+              type="checkbox"
+              checked={filters.showVirtual}
+              onChange={(e) => setFilter("showVirtual", e.target.checked)}
+            />
+            Show projected transactions
+          </label>
+        </div>
+
         {/* Reset filters */}
         {hasActiveFilters && (
           <div className="filter-group filter-group--reset">
@@ -419,6 +603,8 @@ export function TransactionsPage({
           accounts={accounts}
           onEditTransaction={onEditTransaction}
           onDeleteTransaction={onDeleteTransaction}
+          onRealizeTransaction={onRealizeTransaction}
+          onUnrealizeTransaction={onUnrealizeTransaction}
         />
       </div>
     </div>

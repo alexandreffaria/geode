@@ -15,6 +15,14 @@ export function isTransactionPending(transaction: Transaction): boolean {
 }
 
 /**
+ * Returns true if the transaction is virtual (projected/forecast).
+ * Virtual transactions do not affect account balances.
+ */
+export function isTransactionVirtual(transaction: Transaction): boolean {
+  return transaction.is_virtual === true;
+}
+
+/**
  * Formats a bill month string "YYYY-MM" to a readable format like "March 2026".
  */
 export function formatBillMonth(month: string): string {
@@ -164,6 +172,7 @@ export function getDescriptionSuggestions(
 ): DescriptionSuggestion[] {
   const seen = new Map<string, DescriptionSuggestion>();
   for (const tx of transactions) {
+    if (tx.is_virtual === true) continue; // skip virtual/projected transactions
     if (!tx.description?.trim()) continue;
     const key = tx.description.trim().toLowerCase();
     if (seen.has(key)) continue; // keep most-recent (first in reversed array)

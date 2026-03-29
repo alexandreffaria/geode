@@ -35,5 +35,4 @@ export const RECURRING_PRESETS = [
   { label: "Weekly", every: 1, unit: "week" as const },
   { label: "Monthly", every: 1, unit: "month" as const },
   { label: "Yearly", every: 12, unit: "month" as const },
-  { label: "Custom", every: 1, unit: "month" as const },
 ] as const;

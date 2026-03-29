@@ -10,9 +10,8 @@ interface RecurringFieldProps {
 export function RecurringField({ every, unit, onChange }: RecurringFieldProps) {
   // Determine which preset is active (if any)
   const activePreset = RECURRING_PRESETS.find(
-    (p) => p.label !== "Custom" && p.every === every && p.unit === unit,
+    (p) => p.every === every && p.unit === unit,
   );
-  const isCustom = !activePreset;
 
   const handlePresetClick = (preset: (typeof RECURRING_PRESETS)[number]) => {
     onChange(preset.every, preset.unit);
@@ -22,10 +21,7 @@ export function RecurringField({ every, unit, onChange }: RecurringFieldProps) {
     <div className="recurring-field">
       <div className="recurring-presets">
         {RECURRING_PRESETS.map((preset) => {
-          const isActive =
-            preset.label === "Custom"
-              ? isCustom
-              : preset.every === every && preset.unit === unit;
+          const isActive = preset.every === every && preset.unit === unit;
           return (
             <button
               key={preset.label}
@@ -38,24 +34,25 @@ export function RecurringField({ every, unit, onChange }: RecurringFieldProps) {
           );
         })}
       </div>
-      {isCustom && (
-        <div className="recurring-custom">
-          <label className="recurring-custom-label">
-            Every
-            <input
-              type="number"
-              min={1}
-              max={120}
-              value={every}
-              onChange={(e) =>
-                onChange(Math.max(1, parseInt(e.target.value) || 1), "month")
-              }
-              className="recurring-custom-input"
-            />
-            month(s)
-          </label>
-        </div>
-      )}
+
+      {/* Always-visible custom days input */}
+      <div className="recurring-custom">
+        <label className="recurring-custom-label">
+          Every
+          <input
+            type="number"
+            min={1}
+            value={unit === "day" ? every : ""}
+            placeholder={activePreset ? String(activePreset.every) : ""}
+            onChange={(e) => {
+              const days = Math.max(1, parseInt(e.target.value) || 1);
+              onChange(days, "day");
+            }}
+            className={`recurring-custom-input${unit === "day" ? " active" : ""}`}
+          />
+          day(s)
+        </label>
+      </div>
     </div>
   );
 }

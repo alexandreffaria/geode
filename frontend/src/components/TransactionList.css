@@ -72,6 +72,16 @@
   border-bottom-style: dashed;
 }
 
+/* ---- Virtual (projected) row ---- */
+.transaction-row--virtual {
+  opacity: 0.65;
+  border-left: 3px dashed var(--accent-blue, #4a9eff);
+}
+
+.transaction-row--virtual td {
+  font-style: italic;
+}
+
 /* ---- Type cell (badge + status badge) ---- */
 .type-cell {
   display: flex;
@@ -125,6 +135,12 @@
   background: rgba(107, 255, 107, 0.12);
   border: 1px solid rgba(107, 255, 107, 0.4);
   color: #6bff6b;
+}
+
+.status-badge--virtual {
+  background: rgba(74, 158, 255, 0.15);
+  border: 1px solid rgba(74, 158, 255, 0.3);
+  color: #4a9eff;
 }
 
 /* ---- Description cell ---- */
@@ -203,6 +219,37 @@
   gap: 8px;
   justify-content: center;
   align-items: center;
+}
+
+/* ---- Realize button ---- */
+.realize-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: rgba(107, 255, 107, 0.1);
+  border: 1px solid rgba(107, 255, 107, 0.3);
+  border-radius: 4px;
+  color: #6bff6b;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.realize-button:hover {
+  background: rgba(107, 255, 107, 0.2);
+  border-color: #6bff6b;
+  transform: translateY(-1px);
+}
+
+.realize-button:active {
+  transform: translateY(0);
+}
+
+.realize-button:focus {
+  outline: 2px solid #6bff6b;
+  outline-offset: 2px;
 }
 
 .edit-button {

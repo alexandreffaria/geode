@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { Account, Category, ExchangeRate, Transaction } from "../types";
 import { CURRENCY_SYMBOLS } from "../constants";
 import { TransactionList } from "../components/TransactionList";
@@ -42,6 +43,7 @@ export function Dashboard({
   onDeleteTransaction,
   onRefreshData,
 }: DashboardProps) {
+  const navigate = useNavigate();
   const activeAccounts = useMemo(
     () => accounts.filter((a) => !a.archived),
     [accounts],
@@ -59,6 +61,14 @@ export function Dashboard({
 
   const monthPrefix = getCurrentMonthPrefix();
 
+  const navigateToTransactions = (accountName: string) => {
+    const params = new URLSearchParams({
+      account: accountName,
+      month: monthPrefix,
+    });
+    navigate(`/transactions?${params.toString()}`);
+  };
+
   const currentMonthTransactions = useMemo(
     () => transactions.filter((t) => t.date.startsWith(monthPrefix)),
     [transactions, monthPrefix],
@@ -69,6 +79,8 @@ export function Dashboard({
     let expenses = 0;
 
     for (const t of currentMonthTransactions) {
+      // Skip virtual (projected) transactions — they don't affect real balances
+      if (t.is_virtual === true) continue;
       // Skip pending (unpaid) transactions from summary
       if (t.paid === false) continue;
       if (t.type === "earning") {
@@ -81,9 +93,9 @@ export function Dashboard({
     return { income, expenses, net: income - expenses };
   }, [currentMonthTransactions]);
 
-  // Last 5 transactions (already newest-first from hook)
+  // Last 5 real (non-virtual) transactions (already newest-first from hook)
   const recentTransactions = useMemo(
-    () => transactions.slice(0, 5),
+    () => transactions.filter((t) => t.is_virtual !== true).slice(0, 5),
     [transactions],
   );
 
@@ -219,7 +231,20 @@ export function Dashboard({
               const symbol =
                 CURRENCY_SYMBOLS[account.currency] ?? account.currency;
               return (
-                <div key={account.name} className="account-card">
+                <div
+                  key={account.name}
+                  className="account-card account-card--clickable"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigateToTransactions(account.name)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      navigateToTransactions(account.name);
+                    }
+                  }}
+                  aria-label={`View transactions for ${account.name}`}
+                >
                   <div className="account-card-header">
                     <Avatar
                       name={account.name}
@@ -266,7 +291,23 @@ export function Dashboard({
               return (
                 <div
                   key={account.name}
-                  className="account-card account-card--credit-dashboard"
+                  className="account-card account-card--credit-dashboard account-card--clickable"
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => {
+                    // Don't navigate if the "View Bills" button was clicked
+                    const target = e.target as HTMLElement;
+                    if (target.closest(".account-view-bills-btn-dashboard"))
+                      return;
+                    navigateToTransactions(account.name);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      navigateToTransactions(account.name);
+                    }
+                  }}
+                  aria-label={`View transactions for ${account.name}`}
                 >
                   <div className="account-card-header">
                     <Avatar

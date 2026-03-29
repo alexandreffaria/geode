@@ -162,3 +162,9 @@
   outline: none;
   border-color: #4a9eff;
 }
+
+/* Highlight the days input when it is the active selection */
+.recurring-custom-input.active {
+  border-color: #4a9eff;
+  background: #1a2a3a;
+}

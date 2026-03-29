@@ -49,6 +49,7 @@ function getLastDayOfYear(date: Date): string {
 interface DateFilterState {
   startDate: string;
   endDate: string;
+  showVirtual: boolean; // default false — virtual transactions excluded from charts
 }
 
 function getDefaultDateFilter(): DateFilterState {
@@ -56,6 +57,7 @@ function getDefaultDateFilter(): DateFilterState {
   return {
     startDate: getFirstDayOfMonth(now),
     endDate: getLastDayOfMonth(now),
+    showVirtual: false,
   };
 }
 
@@ -341,17 +343,19 @@ export function ChartsPage({
     const now = new Date();
     switch (preset) {
       case "this-month":
-        setDateFilter({
+        setDateFilter((prev) => ({
+          ...prev,
           startDate: getFirstDayOfMonth(now),
           endDate: getLastDayOfMonth(now),
-        });
+        }));
         break;
       case "last-month": {
         const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        setDateFilter({
+        setDateFilter((prev) => ({
+          ...prev,
           startDate: getFirstDayOfMonth(lastMonth),
           endDate: getLastDayOfMonth(lastMonth),
-        });
+        }));
         break;
       }
       case "last-3-months": {
@@ -360,20 +364,22 @@ export function ChartsPage({
           now.getMonth() - 2,
           1,
         );
-        setDateFilter({
+        setDateFilter((prev) => ({
+          ...prev,
           startDate: getFirstDayOfMonth(threeMonthsAgo),
           endDate: getLastDayOfMonth(now),
-        });
+        }));
         break;
       }
       case "this-year":
-        setDateFilter({
+        setDateFilter((prev) => ({
+          ...prev,
           startDate: getFirstDayOfYear(now),
           endDate: getLastDayOfYear(now),
-        });
+        }));
         break;
       case "all-time":
-        setDateFilter({ startDate: "", endDate: "" });
+        setDateFilter((prev) => ({ ...prev, startDate: "", endDate: "" }));
         break;
     }
   }, []);
@@ -408,9 +414,11 @@ export function ChartsPage({
     return null;
   }, [dateFilter.startDate, dateFilter.endDate]);
 
-  // Filter transactions by date range before computing chart aggregates
+  // Filter transactions by date range (and virtual flag) before computing chart aggregates
   const filteredTransactions = useMemo(() => {
     return transactions.filter((t) => {
+      // Exclude virtual unless showVirtual is enabled
+      if (!dateFilter.showVirtual && t.is_virtual === true) return false;
       if (dateFilter.startDate && t.date < dateFilter.startDate) return false;
       if (dateFilter.endDate && t.date > dateFilter.endDate) return false;
       return true;
@@ -488,7 +496,32 @@ export function ChartsPage({
             ))}
           </div>
         </div>
+
+        {/* Show projected transactions toggle */}
+        <div className="filter-group filter-group--virtual">
+          <label className="filter-label filter-label--checkbox">
+            <input
+              type="checkbox"
+              checked={dateFilter.showVirtual}
+              onChange={(e) =>
+                setDateFilter((prev) => ({
+                  ...prev,
+                  showVirtual: e.target.checked,
+                }))
+              }
+            />
+            Include projected transactions
+          </label>
+        </div>
       </div>
+
+      {/* Warning note when projected transactions are included */}
+      {dateFilter.showVirtual && (
+        <div className="charts-virtual-warning">
+          ⚠️ Includes projected transactions — chart data reflects forecasted
+          values, not actual balances.
+        </div>
+      )}
 
       {/* Combo chart — income/expense bars + running balance line */}
       <section className="charts-section">

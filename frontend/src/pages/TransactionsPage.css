@@ -108,12 +108,38 @@
   justify-content: flex-end;
 }
 
+.filter-group--virtual {
+  flex: none;
+  justify-content: flex-end;
+  align-self: center;
+}
+
 .filter-label {
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--text-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+
+.filter-label--checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  user-select: none;
+}
+
+.filter-label--checkbox input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  accent-color: var(--accent-blue);
 }
 
 /* Date range */
@@ -267,6 +293,53 @@
 
 .reset-filters-btn:hover {
   background: rgba(255, 107, 107, 0.1);
+}
+
+/* ── Summary bar ── */
+.transactions-summary-bar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.summary-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.summary-pill-label {
+  color: var(--text-tertiary);
+  font-weight: 500;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.summary-pill-value {
+  font-family: "Courier New", monospace;
+}
+
+.summary-pill--income .summary-pill-value {
+  color: var(--accent-green, #6bff6b);
+}
+
+.summary-pill--expenses .summary-pill-value {
+  color: var(--accent-red, #ff6b6b);
+}
+
+.summary-pill--net-positive .summary-pill-value {
+  color: var(--accent-green, #6bff6b);
+}
+
+.summary-pill--net-negative .summary-pill-value {
+  color: var(--accent-red, #ff6b6b);
 }
 
 /* ── Results ── */

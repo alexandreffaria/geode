@@ -136,22 +136,52 @@ func registerRoutes(mux *http.ServeMux, h *Handlers) {
 
 	mux.HandleFunc("/api/transactions/", middleware.Chain(
 		func(w http.ResponseWriter, r *http.Request) {
-			// Check if it's a specific transaction (has ID)
-			id := r.URL.Path[len("/api/transactions/"):]
-			if id != "" {
-				// Routes for specific transaction
-				switch r.Method {
-				case http.MethodGet:
-					h.transactions.GetTransactionByID(w, r)
-				case http.MethodPut:
-					h.transactions.UpdateTransaction(w, r)
-				case http.MethodDelete:
-					h.transactions.DeleteTransaction(w, r)
-				default:
+			path := r.URL.Path[len("/api/transactions/"):]
+			if path == "" {
+				handlers.WriteError(w, http.StatusBadRequest, "Transaction ID required")
+				return
+			}
+
+			// Route: POST /api/transactions/:id/realize
+			if strings.HasSuffix(path, "/realize") {
+				id := strings.TrimSuffix(path, "/realize")
+				if id == "" {
+					handlers.WriteError(w, http.StatusBadRequest, "Transaction ID required")
+					return
+				}
+				if r.Method == http.MethodPost {
+					h.transactions.RealizeTransaction(w, r)
+				} else {
 					handlers.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
 				}
-			} else {
-				handlers.WriteError(w, http.StatusBadRequest, "Transaction ID required")
+				return
+			}
+
+			// Route: POST /api/transactions/:id/unrealize
+			if strings.HasSuffix(path, "/unrealize") {
+				id := strings.TrimSuffix(path, "/unrealize")
+				if id == "" {
+					handlers.WriteError(w, http.StatusBadRequest, "Transaction ID required")
+					return
+				}
+				if r.Method == http.MethodPost {
+					h.transactions.UnrealizeTransaction(w, r)
+				} else {
+					handlers.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
+				}
+				return
+			}
+
+			// Routes for a specific transaction by ID (GET, PUT, DELETE)
+			switch r.Method {
+			case http.MethodGet:
+				h.transactions.GetTransactionByID(w, r)
+			case http.MethodPut:
+				h.transactions.UpdateTransaction(w, r)
+			case http.MethodDelete:
+				h.transactions.DeleteTransaction(w, r)
+			default:
+				handlers.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
 			}
 		},
 		mw...,

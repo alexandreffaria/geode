@@ -16,6 +16,8 @@ interface TransactionListProps {
   accounts?: Account[];
   onEditTransaction: (transaction: Transaction) => void;
   onDeleteTransaction: (transaction: Transaction) => void;
+  onRealizeTransaction?: (transaction: Transaction) => void;
+  onUnrealizeTransaction?: (transaction: Transaction) => void;
 }
 
 const getFromField = (transaction: Transaction) => {
@@ -58,6 +60,8 @@ export function TransactionList({
   accounts = [],
   onEditTransaction,
   onDeleteTransaction,
+  onRealizeTransaction,
+  onUnrealizeTransaction,
 }: TransactionListProps) {
   return (
     <div className="transaction-list-container">
@@ -90,7 +94,16 @@ export function TransactionList({
                 return (
                   <tr
                     key={transaction.id}
-                    className={pending ? "transaction-row--pending" : ""}
+                    className={
+                      [
+                        pending ? "transaction-row--pending" : "",
+                        transaction.is_virtual
+                          ? "transaction-row--virtual"
+                          : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ") || undefined
+                    }
                   >
                     <td className="date-cell">
                       {formatDate(transaction.date)}
@@ -181,20 +194,56 @@ export function TransactionList({
                         })()}
                     </td>
                     <td className="actions-cell">
-                      <button
-                        className="edit-button"
-                        onClick={() => onEditTransaction(transaction)}
-                        aria-label={`Edit transaction: ${transaction.description || "No description"}`}
-                      >
-                        ✏️ Edit
-                      </button>
-                      <button
-                        className="delete-button"
-                        onClick={() => onDeleteTransaction(transaction)}
-                        aria-label={`Delete transaction: ${transaction.description || "No description"}`}
-                      >
-                        🗑️ Delete
-                      </button>
+                      {transaction.is_virtual ? (
+                        <>
+                          <button
+                            className="delete-button"
+                            onClick={() => onDeleteTransaction(transaction)}
+                            aria-label={`Delete projected transaction: ${transaction.description || "No description"}`}
+                          >
+                            🗑️ Delete
+                          </button>
+                          {onRealizeTransaction && (
+                            <button
+                              className="realize-button"
+                              onClick={() => onRealizeTransaction(transaction)}
+                              aria-label={`Realize transaction: ${transaction.description || "No description"}`}
+                              title="Convert to real transaction"
+                            >
+                              👎
+                            </button>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            className="edit-button"
+                            onClick={() => onEditTransaction(transaction)}
+                            aria-label={`Edit transaction: ${transaction.description || "No description"}`}
+                          >
+                            ✏️ Edit
+                          </button>
+                          <button
+                            className="delete-button"
+                            onClick={() => onDeleteTransaction(transaction)}
+                            aria-label={`Delete transaction: ${transaction.description || "No description"}`}
+                          >
+                            🗑️ Delete
+                          </button>
+                          {onUnrealizeTransaction && (
+                            <button
+                              className="realize-button"
+                              onClick={() =>
+                                onUnrealizeTransaction(transaction)
+                              }
+                              aria-label={`Unrealize transaction: ${transaction.description || "No description"}`}
+                              title="Convert to projected transaction"
+                            >
+                              👍
+                            </button>
+                          )}
+                        </>
+                      )}
                     </td>
                   </tr>
                 );
