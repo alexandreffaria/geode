@@ -3,12 +3,21 @@ package services
 import (
 	"errors"
 	"fmt"
+	"log"
 	"sort"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/meulindo/geode/backend/models"
 	"github.com/meulindo/geode/backend/storage"
+)
+
+// Sentinel errors for the services package.
+var (
+	ErrAccountNotFound      = errors.New("account not found")
+	ErrAccountAlreadyExists = errors.New("account already exists")
+	ErrCategoryNotFound     = errors.New("category not found")
+	ErrTransactionNotFound  = errors.New("transaction not found")
 )
 
 // LedgerService handles business logic for transactions and accounts
@@ -64,7 +73,7 @@ func (s *LedgerService) createInstallments(template *models.Transaction) ([]*mod
 	created := make([]*models.Transaction, 0, n)
 
 	for i := 1; i <= n; i++ {
-		current := i // capture loop variable
+		current := i // capture loop variable (Go 1.21)
 
 		// Compute date: original date + (i-1) months
 		installmentDate := models.Date{
@@ -257,7 +266,7 @@ func (s *LedgerService) UpdateTransaction(updated *models.Transaction) (*models.
 		return nil, err
 	}
 	if original == nil {
-		return nil, errors.New("transaction not found")
+		return nil, ErrTransactionNotFound
 	}
 
 	// Preserve fields from the original that should never be overwritten by the request body
@@ -271,15 +280,21 @@ func (s *LedgerService) UpdateTransaction(updated *models.Transaction) (*models.
 	// Apply the updated transaction's effect on account balances
 	if err := s.updateAccountBalances(updated); err != nil {
 		// If this fails, try to restore original state
-		s.updateAccountBalances(original)
+		if rbErr := s.updateAccountBalances(original); rbErr != nil {
+			log.Printf("CRITICAL: rollback failed for transaction %s: %v", updated.ID, rbErr)
+		}
 		return nil, err
 	}
 
 	// Update the transaction in storage
 	if err := s.storage.UpdateTransaction(updated); err != nil {
 		// Rollback balance changes
-		s.reverseAccountBalances(updated)
-		s.updateAccountBalances(original)
+		if rbErr := s.reverseAccountBalances(updated); rbErr != nil {
+			log.Printf("CRITICAL: rollback failed for transaction %s: %v", updated.ID, rbErr)
+		}
+		if rbErr := s.updateAccountBalances(original); rbErr != nil {
+			log.Printf("CRITICAL: rollback failed for transaction %s: %v", updated.ID, rbErr)
+		}
 		return nil, err
 	}
 
@@ -347,15 +362,21 @@ func (s *LedgerService) UpdateRecurringGroup(groupID string, updated *models.Tra
 		// Apply the new balance impact
 		if err := s.updateAccountBalances(t); err != nil {
 			// Best-effort rollback of this transaction's reversal
-			s.updateAccountBalances(original)
+			if rbErr := s.updateAccountBalances(original); rbErr != nil {
+				log.Printf("CRITICAL: rollback failed for transaction %s: %v", t.ID, rbErr)
+			}
 			return nil, fmt.Errorf("failed to apply balances for transaction %s: %w", t.ID, err)
 		}
 
 		// Persist the updated record
 		if err := s.storage.UpdateTransaction(t); err != nil {
 			// Best-effort rollback
-			s.reverseAccountBalances(t)
-			s.updateAccountBalances(original)
+			if rbErr := s.reverseAccountBalances(t); rbErr != nil {
+				log.Printf("CRITICAL: rollback failed for transaction %s: %v", t.ID, rbErr)
+			}
+			if rbErr := s.updateAccountBalances(original); rbErr != nil {
+				log.Printf("CRITICAL: rollback failed for transaction %s: %v", t.ID, rbErr)
+			}
 			return nil, fmt.Errorf("failed to save transaction %s: %w", t.ID, err)
 		}
 
@@ -373,7 +394,7 @@ func (s *LedgerService) DeleteTransaction(id string) error {
 		return err
 	}
 	if transaction == nil {
-		return errors.New("transaction not found")
+		return ErrTransactionNotFound
 	}
 
 	// Reverse the transaction's effect on account balances
@@ -399,7 +420,7 @@ func (s *LedgerService) adjustAccountBalance(accountName string, amount float64)
 	}
 
 	if account == nil {
-		return errors.New("account not found: " + accountName)
+		return ErrAccountNotFound
 	}
 
 	account.UpdateBalance(amount)
@@ -440,7 +461,7 @@ func (s *LedgerService) CreateAccount(name string, initialBalance float64, curre
 		return nil, err
 	}
 	if existing != nil {
-		return nil, errors.New("account already exists")
+		return nil, ErrAccountAlreadyExists
 	}
 
 	account := models.NewAccount(name, initialBalance)
@@ -478,7 +499,7 @@ func (s *LedgerService) UpdateAccount(name string, req *models.AccountUpdateRequ
 		return nil, err
 	}
 	if account == nil {
-		return nil, errors.New("account not found")
+		return nil, ErrAccountNotFound
 	}
 
 	// Handle rename: check new name is not taken
@@ -557,7 +578,7 @@ func (s *LedgerService) SetMainAccount(name string) error {
 		return err
 	}
 	if account == nil {
-		return errors.New("account not found")
+		return ErrAccountNotFound
 	}
 	return s.storage.SetMainAccount(name)
 }
@@ -574,7 +595,7 @@ func (s *LedgerService) DeleteAccount(name string) error {
 		return err
 	}
 	if account == nil {
-		return errors.New("account not found")
+		return ErrAccountNotFound
 	}
 	return s.storage.DeleteAccount(name)
 }
@@ -614,7 +635,7 @@ func (s *LedgerService) CreateCategory(name string, categoryType string, parentI
 			return nil, err
 		}
 		if parent == nil {
-			return nil, errors.New("parent category not found")
+			return nil, ErrCategoryNotFound
 		}
 	}
 
@@ -648,7 +669,7 @@ func (s *LedgerService) UpdateCategory(id string, req models.CategoryUpdateReque
 		return nil, err
 	}
 	if category == nil {
-		return nil, errors.New("category not found")
+		return nil, ErrCategoryNotFound
 	}
 
 	// Apply name update
@@ -676,7 +697,7 @@ func (s *LedgerService) UpdateCategory(id string, req models.CategoryUpdateReque
 				return nil, err
 			}
 			if parent == nil {
-				return nil, errors.New("parent category not found")
+				return nil, ErrCategoryNotFound
 			}
 			category.ParentID = req.ParentID
 		}
@@ -709,30 +730,21 @@ func (s *LedgerService) DeleteCategory(id string) error {
 		return err
 	}
 	if category == nil {
-		return errors.New("category not found")
+		return ErrCategoryNotFound
 	}
 	return s.storage.DeleteCategory(id)
-}
-
-// CreditCardBillSummary holds the monthly bill summary for a credit card account.
-type CreditCardBillSummary struct {
-	Month        string  `json:"month"`         // "YYYY-MM"
-	TotalAmount  float64 `json:"total_amount"`  // sum of all purchases for this month
-	PaidAmount   float64 `json:"paid_amount"`   // sum of paid bill payments for this month
-	UnpaidAmount float64 `json:"unpaid_amount"` // total_amount - paid_amount
-	IsFullyPaid  bool    `json:"is_fully_paid"` // true when unpaid_amount <= 0
 }
 
 // GetCreditCardBills returns the monthly bill summary for a credit card account.
 // It groups purchase transactions by CreditCardBillMonth (or transaction month if nil),
 // and matches bill payment transfers (ToAccount == accountName, Paid == true) per month.
-func (s *LedgerService) GetCreditCardBills(accountName string) ([]*CreditCardBillSummary, error) {
+func (s *LedgerService) GetCreditCardBills(accountName string) ([]*models.CreditCardBillSummary, error) {
 	account, err := s.storage.GetAccountByName(accountName)
 	if err != nil {
 		return nil, err
 	}
 	if account == nil {
-		return nil, errors.New("account not found")
+		return nil, ErrAccountNotFound
 	}
 
 	allTransactions, err := s.storage.GetAllTransactions()
@@ -782,12 +794,12 @@ func (s *LedgerService) GetCreditCardBills(accountName string) ([]*CreditCardBil
 	}
 	sort.Strings(months)
 
-	summaries := make([]*CreditCardBillSummary, 0, len(months))
+	summaries := make([]*models.CreditCardBillSummary, 0, len(months))
 	for _, m := range months {
 		total := monthTotals[m]
 		paid := monthPaid[m]
 		unpaid := total - paid
-		summaries = append(summaries, &CreditCardBillSummary{
+		summaries = append(summaries, &models.CreditCardBillSummary{
 			Month:        m,
 			TotalAmount:  total,
 			PaidAmount:   paid,
@@ -808,17 +820,9 @@ func billMonth(t *models.Transaction) string {
 	return t.Date.Time.Format("2006-01")
 }
 
-// PayBillRequest holds the parameters for paying a credit card bill.
-type PayBillRequest struct {
-	FromAccount string  `json:"from_account"`
-	Amount      float64 `json:"amount"`
-	BillMonth   string  `json:"bill_month"`  // "YYYY-MM"
-	Description string  `json:"description"`
-}
-
 // PayCreditCardBill creates a bill payment transfer transaction for a credit card account.
 // The payment reduces the credit card's balance (debt) and reduces the checking account's balance.
-func (s *LedgerService) PayCreditCardBill(creditCardAccountName string, req *PayBillRequest) (*models.Transaction, error) {
+func (s *LedgerService) PayCreditCardBill(creditCardAccountName string, req *models.PayBillRequest) (*models.Transaction, error) {
 	if req.FromAccount == "" {
 		return nil, errors.New("from_account is required")
 	}

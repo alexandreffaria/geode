@@ -11,7 +11,8 @@ export interface UseResourceResult<T> {
  * Generic hook for fetching a resource from an async function.
  * Handles loading, error, and refetch state.
  *
- * @param fetchFn - Async function that returns the data
+ * @param fetchFn - Must be a stable reference (wrap in useCallback).
+ *   An unstable fetchFn will cause an infinite refetch loop.
  * @param initialData - Initial value before first fetch (e.g. [] for arrays)
  */
 export function useResource<T>(

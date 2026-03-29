@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 
@@ -61,8 +62,7 @@ func (h *TransactionHandler) GetAllTransactions(w http.ResponseWriter, r *http.R
 
 // GetTransactionByID handles GET /api/transactions/:id
 func (h *TransactionHandler) GetTransactionByID(w http.ResponseWriter, r *http.Request) {
-	// Extract ID from URL path (simple implementation)
-	id := r.URL.Path[len("/api/transactions/"):]
+	id := pathParam(r, "/api/transactions/")
 	if id == "" {
 		WriteError(w, http.StatusBadRequest, "Transaction ID required")
 		return
@@ -71,6 +71,11 @@ func (h *TransactionHandler) GetTransactionByID(w http.ResponseWriter, r *http.R
 	transaction, err := h.ledger.GetTransactionByID(id)
 	if err != nil {
 		log.Printf("Error getting transaction: %v", err)
+		WriteError(w, http.StatusInternalServerError, "Internal server error")
+		return
+	}
+
+	if transaction == nil {
 		WriteError(w, http.StatusNotFound, "Transaction not found")
 		return
 	}
@@ -83,7 +88,7 @@ func (h *TransactionHandler) GetTransactionByID(w http.ResponseWriter, r *http.R
 func (h *TransactionHandler) UpdateRecurringGroup(w http.ResponseWriter, r *http.Request) {
 	// Extract group_id from URL: /api/transactions/group/<group_id>
 	const prefix = "/api/transactions/group/"
-	groupID := r.URL.Path[len(prefix):]
+	groupID := pathParam(r, prefix)
 	if groupID == "" {
 		WriteError(w, http.StatusBadRequest, "Group ID required")
 		return
@@ -113,8 +118,7 @@ func (h *TransactionHandler) UpdateRecurringGroup(w http.ResponseWriter, r *http
 
 // UpdateTransaction handles PUT /api/transactions/:id
 func (h *TransactionHandler) UpdateTransaction(w http.ResponseWriter, r *http.Request) {
-	// Extract ID from URL
-	id := r.URL.Path[len("/api/transactions/"):]
+	id := pathParam(r, "/api/transactions/")
 	if id == "" {
 		WriteError(w, http.StatusBadRequest, "Transaction ID required")
 		return
@@ -133,8 +137,7 @@ func (h *TransactionHandler) UpdateTransaction(w http.ResponseWriter, r *http.Re
 	result, err := h.ledger.UpdateTransaction(&updatedTransaction)
 	if err != nil {
 		log.Printf("Error updating transaction: %v", err)
-		// Determine appropriate status code
-		if err.Error() == "transaction not found" {
+		if errors.Is(err, services.ErrTransactionNotFound) {
 			WriteError(w, http.StatusNotFound, err.Error())
 		} else {
 			WriteError(w, http.StatusBadRequest, err.Error())
@@ -148,19 +151,16 @@ func (h *TransactionHandler) UpdateTransaction(w http.ResponseWriter, r *http.Re
 
 // DeleteTransaction handles DELETE /api/transactions/:id
 func (h *TransactionHandler) DeleteTransaction(w http.ResponseWriter, r *http.Request) {
-	// Extract ID from URL
-	id := r.URL.Path[len("/api/transactions/"):]
+	id := pathParam(r, "/api/transactions/")
 	if id == "" {
 		WriteError(w, http.StatusBadRequest, "Transaction ID required")
 		return
 	}
 
-	// Delete the transaction
 	err := h.ledger.DeleteTransaction(id)
 	if err != nil {
 		log.Printf("Error deleting transaction: %v", err)
-		// Determine appropriate status code
-		if err.Error() == "transaction not found" {
+		if errors.Is(err, services.ErrTransactionNotFound) {
 			WriteError(w, http.StatusNotFound, err.Error())
 		} else {
 			WriteError(w, http.StatusInternalServerError, err.Error())

@@ -33,7 +33,7 @@ interface BaseTransaction {
   installment_group_id?: string;
   // Recurrence fields
   recurrence_months?: number;
-  recurrence_unit?: "week" | "month";
+  recurrence_unit?: RecurrenceUnit;
   recurrence_group_id?: string;
   // Credit card fields
   paid?: boolean | null;

@@ -13,17 +13,37 @@ import type {
 
 const API_BASE_URL = "/api";
 
+interface TransactionPayload {
+  type: string;
+  amount: number;
+  description: string;
+  date: string;
+  account?: string;
+  category?: string;
+  currency?: string;
+  recurrence_months?: number;
+  recurrence_unit?: string;
+  recurrence_group_id?: string;
+  installment_count?: number;
+  installment_group_id?: string;
+  source_account?: string;
+  destination_account?: string;
+  from_account?: string;
+  to_account?: string;
+  installment_total?: number;
+}
+
 /**
  * Helper function to build transaction payload from form data
  * Eliminates duplication between createTransaction and updateTransaction
  */
 function buildTransactionPayload(
   data: TransactionFormData,
-): Record<string, string | number | undefined> {
-  const payload: Record<string, string | number | undefined> = {
+): TransactionPayload {
+  const payload: TransactionPayload = {
     type: data.type,
     amount: parseFloat(data.amount),
-    description: data.description || undefined,
+    description: data.description || "",
     date: data.date, // Send date as YYYY-MM-DD format
   };
 
@@ -60,12 +80,7 @@ class ApiService {
   }
 
   private async handleVoidResponse(response: Response): Promise<void> {
-    if (!response.ok) {
-      const error: ApiError = await response.json().catch(() => ({
-        error: `HTTP error! status: ${response.status}`,
-      }));
-      throw new Error(error.error);
-    }
+    await this.handleResponse<unknown>(response);
   }
 
   async getTransactions(): Promise<Transaction[]> {

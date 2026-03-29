@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 
@@ -36,7 +37,7 @@ func (h *CategoryHandler) GetAllCategories(w http.ResponseWriter, r *http.Reques
 
 // GetCategoryByID handles GET /api/categories/:id
 func (h *CategoryHandler) GetCategoryByID(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Path[len("/api/categories/"):]
+	id := pathParam(r, "/api/categories/")
 	if id == "" {
 		WriteError(w, http.StatusBadRequest, "Category ID required")
 		return
@@ -57,19 +58,9 @@ func (h *CategoryHandler) GetCategoryByID(w http.ResponseWriter, r *http.Request
 	WriteJSON(w, http.StatusOK, category)
 }
 
-// createCategoryRequest is the request body for POST /api/categories
-type createCategoryRequest struct {
-	Name          string  `json:"name"`
-	Type          string  `json:"type"`
-	ParentID      *string `json:"parent_id"`
-	GradientStart string  `json:"gradient_start"`
-	GradientEnd   string  `json:"gradient_end"`
-	ImageURL      string  `json:"image_url"`
-}
-
 // CreateCategory handles POST /api/categories
 func (h *CategoryHandler) CreateCategory(w http.ResponseWriter, r *http.Request) {
-	var req createCategoryRequest
+	var req models.CategoryRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("Error decoding create category request: %v", err)
 		WriteError(w, http.StatusBadRequest, "Invalid request body")
@@ -103,7 +94,7 @@ func (h *CategoryHandler) CreateCategory(w http.ResponseWriter, r *http.Request)
 
 // UpdateCategory handles PUT /api/categories/:id
 func (h *CategoryHandler) UpdateCategory(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Path[len("/api/categories/"):]
+	id := pathParam(r, "/api/categories/")
 	if id == "" {
 		WriteError(w, http.StatusBadRequest, "Category ID required")
 		return
@@ -119,7 +110,7 @@ func (h *CategoryHandler) UpdateCategory(w http.ResponseWriter, r *http.Request)
 	category, err := h.service.UpdateCategory(id, req)
 	if err != nil {
 		log.Printf("Error updating category %s: %v", id, err)
-		if err.Error() == "category not found" {
+		if errors.Is(err, services.ErrCategoryNotFound) {
 			WriteError(w, http.StatusNotFound, err.Error())
 		} else if err.Error() == "a category with that name already exists in the same scope" {
 			WriteError(w, http.StatusConflict, err.Error())
@@ -135,7 +126,7 @@ func (h *CategoryHandler) UpdateCategory(w http.ResponseWriter, r *http.Request)
 
 // DeleteCategory handles DELETE /api/categories/:id
 func (h *CategoryHandler) DeleteCategory(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Path[len("/api/categories/"):]
+	id := pathParam(r, "/api/categories/")
 	if id == "" {
 		WriteError(w, http.StatusBadRequest, "Category ID required")
 		return
@@ -143,7 +134,7 @@ func (h *CategoryHandler) DeleteCategory(w http.ResponseWriter, r *http.Request)
 
 	if err := h.service.DeleteCategory(id); err != nil {
 		log.Printf("Error deleting category %s: %v", id, err)
-		if err.Error() == "category not found" {
+		if errors.Is(err, services.ErrCategoryNotFound) {
 			WriteError(w, http.StatusNotFound, err.Error())
 		} else {
 			WriteError(w, http.StatusInternalServerError, err.Error())

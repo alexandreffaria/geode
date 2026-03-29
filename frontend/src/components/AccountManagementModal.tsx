@@ -78,7 +78,7 @@ export function AccountManagementModal({
   const [addSaving, setAddSaving] = useState(false);
 
   const [deletingAccount, setDeletingAccount] = useState<string | null>(null);
-  const [settingMainAccount, setSettingMainAccount] = useState<string | null>(
+  const [_settingMainAccount, setSettingMainAccount] = useState<string | null>(
     null,
   );
 

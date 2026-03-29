@@ -103,21 +103,7 @@ function App() {
 
   // ── Loading screen ──────────────────────────────────────────────────────────
   if (loading) {
-    return (
-      <div
-        style={{
-          minHeight: "100vh",
-          background: "var(--bg-primary)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "var(--text-tertiary)",
-          fontSize: "1.5rem",
-        }}
-      >
-        Loading…
-      </div>
-    );
+    return <div className="app-loading">Loading…</div>;
   }
 
   return (
@@ -187,7 +173,7 @@ function App() {
         <CreditCardBillModal
           account={billsAccount}
           accounts={accounts}
-          isOpen={billsAccount !== null}
+          isOpen={true}
           onClose={() => setBillsAccount(null)}
           onPaymentMade={refetchData}
         />

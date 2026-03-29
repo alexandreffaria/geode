@@ -90,6 +90,9 @@ func main() {
 
 // registerRoutes sets up all HTTP routes with appropriate middleware
 func registerRoutes(mux *http.ServeMux, h *Handlers) {
+	// Shared middleware applied to all routes
+	mw := []func(http.HandlerFunc) http.HandlerFunc{middleware.CORS, middleware.Logger}
+
 	// Transaction routes
 	mux.HandleFunc("/api/transactions", middleware.Chain(
 		func(w http.ResponseWriter, r *http.Request) {
@@ -101,8 +104,7 @@ func registerRoutes(mux *http.ServeMux, h *Handlers) {
 				handlers.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
 			}
 		},
-		middleware.CORS,
-		middleware.Logger,
+		mw...,
 	))
 
 	// PUT /api/transactions/group/:group_id — must be registered BEFORE /api/transactions/
@@ -120,8 +122,7 @@ func registerRoutes(mux *http.ServeMux, h *Handlers) {
 				handlers.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
 			}
 		},
-		middleware.CORS,
-		middleware.Logger,
+		mw...,
 	))
 
 	mux.HandleFunc("/api/transactions/", middleware.Chain(
@@ -144,8 +145,7 @@ func registerRoutes(mux *http.ServeMux, h *Handlers) {
 				handlers.WriteError(w, http.StatusBadRequest, "Transaction ID required")
 			}
 		},
-		middleware.CORS,
-		middleware.Logger,
+		mw...,
 	))
 
 	// Account routes
@@ -160,8 +160,7 @@ func registerRoutes(mux *http.ServeMux, h *Handlers) {
 				handlers.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
 			}
 		},
-		middleware.CORS,
-		middleware.Logger,
+		mw...,
 	))
 
 	// GET /api/accounts/main — must be registered BEFORE the generic /api/accounts/ handler
@@ -174,8 +173,7 @@ func registerRoutes(mux *http.ServeMux, h *Handlers) {
 				handlers.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
 			}
 		},
-		middleware.CORS,
-		middleware.Logger,
+		mw...,
 	))
 
 	mux.HandleFunc("/api/accounts/", middleware.Chain(
@@ -228,8 +226,7 @@ func registerRoutes(mux *http.ServeMux, h *Handlers) {
 				handlers.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
 			}
 		},
-		middleware.CORS,
-		middleware.Logger,
+		mw...,
 	))
 
 	// Category routes
@@ -244,8 +241,7 @@ func registerRoutes(mux *http.ServeMux, h *Handlers) {
 				handlers.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
 			}
 		},
-		middleware.CORS,
-		middleware.Logger,
+		mw...,
 	))
 
 	mux.HandleFunc("/api/categories/", middleware.Chain(
@@ -266,13 +262,15 @@ func registerRoutes(mux *http.ServeMux, h *Handlers) {
 				handlers.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
 			}
 		},
-		middleware.CORS,
-		middleware.Logger,
+		mw...,
 	))
 
 	// Health check endpoint
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
-	})
+	mux.HandleFunc("/health", middleware.Chain(
+		func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("OK"))
+		},
+		mw...,
+	))
 }

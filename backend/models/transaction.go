@@ -171,7 +171,7 @@ func (t *Transaction) Validate() error {
 
 // GetAffectedAccounts returns the accounts affected by this transaction
 func (t *Transaction) GetAffectedAccounts() []string {
-	accounts := []string{}
+	var accounts []string
 
 	switch t.Type {
 	case TransactionTypePurchase, TransactionTypeEarning:

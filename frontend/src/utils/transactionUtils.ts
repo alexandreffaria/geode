@@ -48,15 +48,6 @@ export function formatDate(dateStr: string): string {
 }
 
 /**
- * Formats an amount with sign and dollar sign (legacy default).
- * For currency-aware formatting, use formatCurrency().
- */
-export function formatAmount(amount: number, isPositive: boolean): string {
-  const sign = isPositive ? "+" : "-";
-  return `${sign}$${Math.abs(amount).toFixed(2)}`;
-}
-
-/**
  * Formats an amount with the correct currency symbol.
  */
 export function formatCurrency(
@@ -76,14 +67,6 @@ export function formatCurrency(
 export function capitalize(str: string): string {
   if (!str) return str;
   return str.charAt(0).toUpperCase() + str.slice(1);
-}
-
-/**
- * Returns a display label for a transaction type.
- * @deprecated Use capitalize() directly.
- */
-export function getTransactionTypeLabel(type: string): string {
-  return capitalize(type);
 }
 
 /**

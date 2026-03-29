@@ -27,21 +27,13 @@ func CORS(next http.HandlerFunc) http.HandlerFunc {
 func Logger(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		
+
 		// Call the next handler
 		next(w, r)
-		
+
 		// Log request details
 		duration := time.Since(start)
 		log.Printf("%s %s - %v", r.Method, r.URL.Path, duration)
-	}
-}
-
-// JSONContentType sets the Content-Type header to application/json
-func JSONContentType(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		next(w, r)
 	}
 }
 

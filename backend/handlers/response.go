@@ -32,7 +32,5 @@ func WriteJSON(w http.ResponseWriter, statusCode int, data interface{}) {
 
 	if err := json.NewEncoder(w).Encode(data); err != nil {
 		log.Printf("Error encoding JSON response: %v", err)
-		// Attempt to write error response (though headers are already sent)
-		WriteError(w, http.StatusInternalServerError, "Failed to encode response")
 	}
 }

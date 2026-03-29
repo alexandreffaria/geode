@@ -1,11 +1,11 @@
 import type { Transaction, Category } from "../types";
 import {
   formatDate,
-  formatAmount,
-  getTransactionTypeLabel,
+  formatCurrency,
   isTransactionPending,
   formatBillMonth,
   getTransactionBillMonth,
+  resolveCategoryName,
 } from "../utils/transactionUtils";
 import "./TransactionList.css";
 
@@ -34,30 +34,12 @@ const getToField = (transaction: Transaction) => {
   return "—"; // purchase has no "to"
 };
 
-/**
- * Resolves a category ID to a display name.
- * For subcategories, shows "Parent > Child" using parent_name from the backend.
- * Falls back to the raw ID if the category is not found.
- */
-function resolveCategoryDisplay(
-  categoryId: string,
-  categories: Category[],
-): string {
-  if (!categoryId) return "—";
-  const cat = categories.find((c) => c.id === categoryId);
-  if (!cat) return categoryId; // fallback: show raw ID if not found
-  if (cat.parent_name) {
-    return `${cat.parent_name} > ${cat.name}`;
-  }
-  return cat.name;
-}
-
 const getCategoryField = (
   transaction: Transaction,
   categories: Category[],
 ): string => {
   if (transaction.type === "purchase" || transaction.type === "earning") {
-    return resolveCategoryDisplay(transaction.category, categories);
+    return resolveCategoryName(transaction.category, categories) || "—";
   }
   return "—"; // transfer has no category
 };
@@ -113,7 +95,8 @@ export function TransactionList({
                     <td>
                       <div className="type-cell">
                         <span className={`type-badge type-${transaction.type}`}>
-                          {getTransactionTypeLabel(transaction.type)}
+                          {transaction.type.charAt(0).toUpperCase() +
+                            transaction.type.slice(1)}
                         </span>
                         {pending && (
                           <span className="status-badge status-badge--pending">
@@ -156,9 +139,10 @@ export function TransactionList({
                       <span
                         className={`${getAmountClass(transaction.type)}${pending ? " amount--pending" : ""}`}
                       >
-                        {formatAmount(
+                        {formatCurrency(
                           transaction.amount,
-                          transaction.type === "earning",
+                          (transaction as unknown as { currency?: string })
+                            .currency || "BRL",
                         )}
                       </span>
                     </td>

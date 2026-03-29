@@ -3,6 +3,7 @@ package storage
 import (
 	"encoding/json"
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sync"
@@ -45,21 +46,21 @@ func NewJSONStorage(dataDir string) (*JSONStorage, error) {
 // initializeFiles creates empty JSON files if they don't exist
 func (s *JSONStorage) initializeFiles() error {
 	// Initialize transactions file
-	if _, err := os.Stat(s.transactionsFile); os.IsNotExist(err) {
+	if _, err := os.Stat(s.transactionsFile); errors.Is(err, fs.ErrNotExist) {
 		if err := s.writeTransactions([]*models.Transaction{}); err != nil {
 			return err
 		}
 	}
 
 	// Initialize accounts file
-	if _, err := os.Stat(s.accountsFile); os.IsNotExist(err) {
+	if _, err := os.Stat(s.accountsFile); errors.Is(err, fs.ErrNotExist) {
 		if err := s.writeAccounts([]*models.Account{}); err != nil {
 			return err
 		}
 	}
 
 	// Initialize categories file
-	if _, err := os.Stat(s.categoriesFile); os.IsNotExist(err) {
+	if _, err := os.Stat(s.categoriesFile); errors.Is(err, fs.ErrNotExist) {
 		if err := s.writeCategories([]*models.Category{}); err != nil {
 			return err
 		}
@@ -90,7 +91,8 @@ func (s *JSONStorage) GetAllTransactions() ([]*models.Transaction, error) {
 	return s.readTransactions()
 }
 
-// GetTransactionByID retrieves a transaction by ID
+// GetTransactionByID retrieves a transaction by ID.
+// Returns nil, nil when not found (consistent with GetAccountByName and GetCategoryByID).
 func (s *JSONStorage) GetTransactionByID(id string) (*models.Transaction, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -106,7 +108,7 @@ func (s *JSONStorage) GetTransactionByID(id string) (*models.Transaction, error)
 		}
 	}
 
-	return nil, errors.New("transaction not found")
+	return nil, nil
 }
 
 // GetTransactionsByGroupID retrieves all transactions belonging to a recurrence group
@@ -388,10 +390,16 @@ func (s *JSONStorage) GetCategoryByID(id string) (*models.Category, error) {
 		return nil, err
 	}
 
+	// Build ID→Name index for O(1) parent lookup
+	idToName := make(map[string]string, len(categories))
+	for _, c := range categories {
+		idToName[c.ID] = c.Name
+	}
+
 	for _, c := range categories {
 		if c.ID == id {
 			result := *c
-			result.ParentName = s.lookupParentName(c.ParentID, categories)
+			result.ParentName = lookupParentName(c.ParentID, idToName)
 			return &result, nil
 		}
 	}
@@ -410,10 +418,16 @@ func (s *JSONStorage) GetCategoryByName(name string) (*models.Category, error) {
 		return nil, err
 	}
 
+	// Build ID→Name index for O(1) parent lookup
+	idToName := make(map[string]string, len(categories))
+	for _, c := range categories {
+		idToName[c.ID] = c.Name
+	}
+
 	for _, c := range categories {
 		if c.Name == name {
 			result := *c
-			result.ParentName = s.lookupParentName(c.ParentID, categories)
+			result.ParentName = lookupParentName(c.ParentID, idToName)
 			return &result, nil
 		}
 	}
@@ -464,9 +478,15 @@ func (s *JSONStorage) UpdateCategory(id string, category *models.Category) (*mod
 		return nil, err
 	}
 
+	// Build ID→Name index for O(1) parent lookup
+	idToName := make(map[string]string, len(categories))
+	for _, c := range categories {
+		idToName[c.ID] = c.Name
+	}
+
 	// Populate ParentName for the returned value
 	result := *updated
-	result.ParentName = s.lookupParentName(updated.ParentID, categories)
+	result.ParentName = lookupParentName(updated.ParentID, idToName)
 	return &result, nil
 }
 
@@ -517,16 +537,13 @@ func (s *JSONStorage) populateParentNames(categories []*models.Category) []*mode
 	return result
 }
 
-// lookupParentName returns a pointer to the parent's name given a parentID and the full list.
-func (s *JSONStorage) lookupParentName(parentID *string, categories []*models.Category) *string {
+// lookupParentName returns a pointer to the parent's name given a parentID and the idToName map.
+func lookupParentName(parentID *string, idToName map[string]string) *string {
 	if parentID == nil || *parentID == "" {
 		return nil
 	}
-	for _, c := range categories {
-		if c.ID == *parentID {
-			name := c.Name
-			return &name
-		}
+	if name, ok := idToName[*parentID]; ok {
+		return &name
 	}
 	return nil
 }

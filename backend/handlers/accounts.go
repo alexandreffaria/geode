@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"strings"
@@ -37,7 +38,7 @@ func (h *AccountHandler) GetAllAccounts(w http.ResponseWriter, r *http.Request) 
 
 // GetAccountByName handles GET /api/accounts/:name
 func (h *AccountHandler) GetAccountByName(w http.ResponseWriter, r *http.Request) {
-	name := r.URL.Path[len("/api/accounts/"):]
+	name := pathParam(r, "/api/accounts/")
 	if name == "" {
 		WriteError(w, http.StatusBadRequest, "Account name required")
 		return
@@ -58,21 +59,9 @@ func (h *AccountHandler) GetAccountByName(w http.ResponseWriter, r *http.Request
 	WriteJSON(w, http.StatusOK, account)
 }
 
-// createAccountRequest is the request body for POST /api/accounts
-type createAccountRequest struct {
-	Name           string   `json:"name"`
-	InitialBalance float64  `json:"initialBalance"`
-	Currency       string   `json:"currency"`
-	ImageURL       string   `json:"imageURL"`
-	GradientStart  string   `json:"gradientStart"`
-	GradientEnd    string   `json:"gradientEnd"`
-	Type           string   `json:"type"`         // "checking" | "credit_card"
-	CreditLimit    *float64 `json:"credit_limit"` // optional, for credit_card accounts
-}
-
 // CreateAccount handles POST /api/accounts
 func (h *AccountHandler) CreateAccount(w http.ResponseWriter, r *http.Request) {
-	var req createAccountRequest
+	var req models.AccountCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("Error decoding create account request: %v", err)
 		WriteError(w, http.StatusBadRequest, "Invalid request body")
@@ -87,7 +76,7 @@ func (h *AccountHandler) CreateAccount(w http.ResponseWriter, r *http.Request) {
 	account, err := h.ledger.CreateAccount(req.Name, req.InitialBalance, req.Currency, req.ImageURL, req.GradientStart, req.GradientEnd, req.Type, req.CreditLimit)
 	if err != nil {
 		log.Printf("Error creating account: %v", err)
-		if err.Error() == "account already exists" {
+		if errors.Is(err, services.ErrAccountAlreadyExists) {
 			WriteError(w, http.StatusConflict, err.Error())
 		} else {
 			WriteError(w, http.StatusBadRequest, err.Error())
@@ -101,7 +90,7 @@ func (h *AccountHandler) CreateAccount(w http.ResponseWriter, r *http.Request) {
 
 // UpdateAccount handles PUT /api/accounts/:name
 func (h *AccountHandler) UpdateAccount(w http.ResponseWriter, r *http.Request) {
-	name := r.URL.Path[len("/api/accounts/"):]
+	name := pathParam(r, "/api/accounts/")
 	if name == "" {
 		WriteError(w, http.StatusBadRequest, "Account name required")
 		return
@@ -117,7 +106,7 @@ func (h *AccountHandler) UpdateAccount(w http.ResponseWriter, r *http.Request) {
 	account, err := h.ledger.UpdateAccount(name, &req)
 	if err != nil {
 		log.Printf("Error updating account %s: %v", name, err)
-		if err.Error() == "account not found" {
+		if errors.Is(err, services.ErrAccountNotFound) {
 			WriteError(w, http.StatusNotFound, err.Error())
 		} else if err.Error() == "an account with that name already exists" {
 			WriteError(w, http.StatusConflict, err.Error())
@@ -133,7 +122,7 @@ func (h *AccountHandler) UpdateAccount(w http.ResponseWriter, r *http.Request) {
 
 // DeleteAccount handles DELETE /api/accounts/:name
 func (h *AccountHandler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
-	name := r.URL.Path[len("/api/accounts/"):]
+	name := pathParam(r, "/api/accounts/")
 	if name == "" {
 		WriteError(w, http.StatusBadRequest, "Account name required")
 		return
@@ -141,7 +130,7 @@ func (h *AccountHandler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.ledger.DeleteAccount(name); err != nil {
 		log.Printf("Error deleting account %s: %v", name, err)
-		if err.Error() == "account not found" {
+		if errors.Is(err, services.ErrAccountNotFound) {
 			WriteError(w, http.StatusNotFound, err.Error())
 		} else {
 			WriteError(w, http.StatusInternalServerError, err.Error())
@@ -160,7 +149,7 @@ func (h *AccountHandler) SetMainAccount(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	path := r.URL.Path[len("/api/accounts/"):]
+	path := pathParam(r, "/api/accounts/")
 	name := strings.TrimSuffix(path, "/main")
 	if name == "" {
 		WriteError(w, http.StatusBadRequest, "Account name required")
@@ -169,7 +158,7 @@ func (h *AccountHandler) SetMainAccount(w http.ResponseWriter, r *http.Request) 
 
 	if err := h.ledger.SetMainAccount(name); err != nil {
 		log.Printf("Error setting main account %s: %v", name, err)
-		if err.Error() == "account not found" {
+		if errors.Is(err, services.ErrAccountNotFound) {
 			WriteError(w, http.StatusNotFound, err.Error())
 		} else {
 			WriteError(w, http.StatusInternalServerError, "Internal server error")
@@ -213,7 +202,7 @@ func (h *AccountHandler) GetMainAccount(w http.ResponseWriter, r *http.Request) 
 // GetCreditCardBills handles GET /api/accounts/:name/credit-card-bills
 func (h *AccountHandler) GetCreditCardBills(w http.ResponseWriter, r *http.Request) {
 	// Extract account name from path: /api/accounts/:name/credit-card-bills
-	path := r.URL.Path[len("/api/accounts/"):]
+	path := pathParam(r, "/api/accounts/")
 	name := strings.TrimSuffix(path, "/credit-card-bills")
 	if name == "" {
 		WriteError(w, http.StatusBadRequest, "Account name required")
@@ -223,7 +212,7 @@ func (h *AccountHandler) GetCreditCardBills(w http.ResponseWriter, r *http.Reque
 	summaries, err := h.ledger.GetCreditCardBills(name)
 	if err != nil {
 		log.Printf("Error getting credit card bills for %s: %v", name, err)
-		if err.Error() == "account not found" {
+		if errors.Is(err, services.ErrAccountNotFound) {
 			WriteError(w, http.StatusNotFound, err.Error())
 		} else {
 			WriteError(w, http.StatusInternalServerError, "Internal server error")
@@ -238,14 +227,14 @@ func (h *AccountHandler) GetCreditCardBills(w http.ResponseWriter, r *http.Reque
 // PayBill handles POST /api/accounts/:name/pay-bill
 func (h *AccountHandler) PayBill(w http.ResponseWriter, r *http.Request) {
 	// Extract account name from path: /api/accounts/:name/pay-bill
-	path := r.URL.Path[len("/api/accounts/"):]
+	path := pathParam(r, "/api/accounts/")
 	name := strings.TrimSuffix(path, "/pay-bill")
 	if name == "" {
 		WriteError(w, http.StatusBadRequest, "Account name required")
 		return
 	}
 
-	var req services.PayBillRequest
+	var req models.PayBillRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("Error decoding pay bill request: %v", err)
 		WriteError(w, http.StatusBadRequest, "Invalid request body")
@@ -255,7 +244,7 @@ func (h *AccountHandler) PayBill(w http.ResponseWriter, r *http.Request) {
 	transaction, err := h.ledger.PayCreditCardBill(name, &req)
 	if err != nil {
 		log.Printf("Error paying credit card bill for %s: %v", name, err)
-		if err.Error() == "credit card account not found" || err.Error() == "account not found" {
+		if errors.Is(err, services.ErrAccountNotFound) || err.Error() == "credit card account not found" {
 			WriteError(w, http.StatusNotFound, err.Error())
 		} else {
 			WriteError(w, http.StatusBadRequest, err.Error())

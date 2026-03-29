@@ -1,150 +1,8 @@
-.app {
-  min-height: 100vh;
-  background: var(--bg-primary);
-  padding: 20px;
-}
-
-.app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 40px;
-  padding: 20px 28px;
-  background: linear-gradient(
-    135deg,
-    var(--bg-secondary) 0%,
-    var(--bg-tertiary) 100%
-  );
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-}
-
-.app-header-left {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.app-header h1 {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: 2rem;
-  font-weight: 700;
-}
-
-.subtitle {
-  margin: 0;
-  color: var(--text-tertiary);
-  font-size: 1rem;
-}
-
-.app-header-nav {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
-}
-
-.nav-button {
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.95rem;
-  font-weight: 600;
-  padding: 10px 18px;
-  transition:
-    background 0.2s,
-    transform 0.15s,
-    box-shadow 0.2s;
-  white-space: nowrap;
-}
-
-.nav-button:focus {
-  outline: 2px solid var(--accent-blue);
-  outline-offset: 2px;
-}
-
-.nav-button--accounts {
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-color);
-  color: var(--text-primary);
-}
-
-.nav-button--accounts:hover {
-  background: #333;
-  border-color: var(--accent-blue);
-  color: var(--accent-blue);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(74, 158, 255, 0.2);
-}
-
-.nav-button--categories {
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-color);
-  color: var(--text-primary);
-}
-
-.nav-button--categories:hover {
-  background: #333;
-  border-color: var(--accent-green);
-  color: var(--accent-green);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(107, 255, 107, 0.2);
-}
-
 .loading {
   text-align: center;
   padding: 100px 20px;
   color: var(--text-tertiary);
   font-size: 1.5rem;
-}
-
-.global-error {
-  background: #4a1e1e;
-  border: 2px solid #8a3a3a;
-  border-radius: 8px;
-  padding: 16px 20px;
-  margin-bottom: 24px;
-  color: var(--accent-red);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-}
-
-.retry-button {
-  padding: 8px 16px;
-  background: var(--accent-red);
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-  white-space: nowrap;
-}
-
-.retry-button:hover {
-  background: #ff5252;
-}
-
-.app-main {
-  display: grid;
-  grid-template-columns: 400px 1fr;
-  gap: 24px;
-  max-width: 1600px;
-  margin: 0 auto;
-}
-
-.left-column {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.right-column {
-  min-width: 0; /* Prevents grid overflow */
 }
 
 /* Add Transaction Button */
@@ -183,40 +41,12 @@
   font-weight: 700;
 }
 
-@media (max-width: 1200px) {
-  .app-main {
-    grid-template-columns: 1fr;
-  }
-
-  .left-column {
-    order: 2;
-  }
-
-  .right-column {
-    order: 1;
-  }
-}
-
-@media (max-width: 768px) {
-  .app {
-    padding: 12px;
-  }
-
-  .app-header {
-    padding: 20px 16px;
-    margin-bottom: 24px;
-  }
-
-  .app-header h1 {
-    font-size: 1.8rem;
-  }
-
-  .subtitle {
-    font-size: 0.95rem;
-  }
-
-  .global-error {
-    flex-direction: column;
-    text-align: center;
-  }
+.app-loading {
+  min-height: 100vh;
+  background: var(--bg-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  font-size: 1.5rem;
 }
