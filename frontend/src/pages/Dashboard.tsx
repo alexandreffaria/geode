@@ -2,9 +2,8 @@ import { useMemo, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import type { Account, Category, ExchangeRate, Transaction } from "../types";
 import { CURRENCY_SYMBOLS } from "../constants";
-import { TransactionList } from "../components/TransactionList";
 import { Avatar } from "../components/ui/Avatar";
-import { formatCurrency } from "../utils/transactionUtils";
+import { formatCurrency, resolveCategoryName } from "../utils/transactionUtils";
 import "./Dashboard.css";
 
 interface DashboardProps {
@@ -33,14 +32,123 @@ function getMonthLabel(): string {
   });
 }
 
+/** Returns today's date as "YYYY-MM-DD" in local time (avoids UTC offset issues). */
+function getTodayLocalDateString(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/** Returns a date N days from today as "YYYY-MM-DD" in local time. */
+function getDatePlusDays(days: number): string {
+  const now = new Date();
+  now.setDate(now.getDate() + days);
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/** Formats a date string "YYYY-MM-DD" as a short due date like "Mar 29". */
+function formatDueDate(dateStr: string): string {
+  // Use T12:00:00 to avoid UTC midnight off-by-one in local timezones
+  const date = new Date(dateStr + "T12:00:00");
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+interface BillRow {
+  id: string;
+  description: string;
+  categoryId: string;
+  account: string;
+  date: string;
+  amount: number;
+  currency: string;
+  isOverdue: boolean;
+}
+
+interface BillsTableProps {
+  title: string;
+  bills: BillRow[];
+  categories: Category[];
+  emptyMessage: string;
+  accentClass: string;
+}
+
+function BillsTable({
+  title,
+  bills,
+  categories,
+  emptyMessage,
+  accentClass,
+}: BillsTableProps) {
+  return (
+    <div className={`bills-table-card ${accentClass}`}>
+      <h3 className="bills-table-title">{title}</h3>
+      {bills.length === 0 ? (
+        <p className="bills-empty-state">{emptyMessage}</p>
+      ) : (
+        <div className="bills-table-wrapper">
+          <table className="bills-table">
+            <thead>
+              <tr>
+                <th className="bills-th">Description</th>
+                <th className="bills-th">Category</th>
+                <th className="bills-th">Account</th>
+                <th className="bills-th bills-th--date">Due Date</th>
+                <th className="bills-th bills-th--amount">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {bills.map((bill) => (
+                <tr
+                  key={bill.id}
+                  className={`bills-tr ${bill.isOverdue ? "bills-tr--overdue" : ""}`}
+                >
+                  <td className="bills-td bills-td--description">
+                    {bill.isOverdue && (
+                      <span
+                        className="bills-overdue-badge"
+                        title="Overdue"
+                        aria-label="Overdue"
+                      >
+                        Overdue
+                      </span>
+                    )}
+                    <span className="bills-description-text">
+                      {bill.description || <em className="bills-no-desc">—</em>}
+                    </span>
+                  </td>
+                  <td className="bills-td bills-td--category">
+                    {resolveCategoryName(bill.categoryId, categories)}
+                  </td>
+                  <td className="bills-td bills-td--account">{bill.account}</td>
+                  <td className="bills-td bills-td--date">
+                    {formatDueDate(bill.date)}
+                  </td>
+                  <td className="bills-td bills-td--amount">
+                    {formatCurrency(bill.amount, bill.currency)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Dashboard({
   transactions,
   accounts,
   categories,
   exchangeRates,
   onAddTransaction,
-  onEditTransaction,
-  onDeleteTransaction,
+  onEditTransaction: _onEditTransaction,
+  onDeleteTransaction: _onDeleteTransaction,
   onOpenBillModal,
 }: DashboardProps) {
   const navigate = useNavigate();
@@ -96,12 +204,6 @@ export function Dashboard({
     return { income, expenses, net: income - expenses };
   }, [currentMonthTransactions]);
 
-  // Last 5 real (non-virtual) transactions (already newest-first from hook)
-  const recentTransactions = useMemo(
-    () => transactions.filter((t) => t.is_virtual !== true).slice(0, 5),
-    [transactions],
-  );
-
   // Primary currency for summary display (most common among active accounts, fallback BRL)
   const primaryCurrency = useMemo(() => {
     if (activeAccounts.length === 0) return "BRL";
@@ -150,6 +252,65 @@ export function Dashboard({
     [creditCardAccounts],
   );
 
+  // ── Bills to Pay / Bills to Receive ──────────────────────────────────────
+  const { billsToPay, billsToReceive } = useMemo(() => {
+    const today = getTodayLocalDateString();
+    const cutoff = getDatePlusDays(15);
+
+    // Build a lookup map: account name → currency
+    const accountCurrencyMap: Record<string, string> = {};
+    for (const a of accounts) {
+      accountCurrencyMap[a.name] = a.currency;
+    }
+
+    const pay: BillRow[] = [];
+    const receive: BillRow[] = [];
+
+    for (const t of transactions) {
+      // Only virtual transactions
+      if (t.is_virtual !== true) continue;
+      // Only purchase or earning (not transfer)
+      if (t.type !== "purchase" && t.type !== "earning") continue;
+
+      const isOverdue = t.date < today;
+      const isUpcoming = t.date >= today && t.date <= cutoff;
+
+      if (!isOverdue && !isUpcoming) continue;
+
+      const account = t.account;
+      const currency = accountCurrencyMap[account] ?? primaryCurrency;
+
+      const row: BillRow = {
+        id: t.id,
+        description: t.description ?? "",
+        categoryId: t.category ?? "",
+        account,
+        date: t.date,
+        amount: t.amount,
+        currency,
+        isOverdue,
+      };
+
+      if (t.type === "purchase") {
+        pay.push(row);
+      } else {
+        receive.push(row);
+      }
+    }
+
+    // Sort: overdue first (ascending date), then upcoming (ascending date)
+    const sortBills = (a: BillRow, b: BillRow) => {
+      if (a.isOverdue && !b.isOverdue) return -1;
+      if (!a.isOverdue && b.isOverdue) return 1;
+      return a.date.localeCompare(b.date);
+    };
+
+    pay.sort(sortBills);
+    receive.sort(sortBills);
+
+    return { billsToPay: pay, billsToReceive: receive };
+  }, [transactions, accounts, primaryCurrency]);
+
   return (
     <div className="dashboard">
       {/* Page header */}
@@ -171,7 +332,7 @@ export function Dashboard({
       {/* Total balance card */}
       <section className="dashboard-section">
         <h2 className="section-title">Overview</h2>
-        <div className="summary-cards">
+        <div className="summary-cards summary-cards--overview">
           <div className="summary-card summary-card--total-balance">
             <div className="summary-card-label">Total Balance</div>
             {totalBalance !== null ? (
@@ -371,29 +532,30 @@ export function Dashboard({
         </section>
       )}
 
-      {/* Recent transactions */}
+      {/* Bills to Pay & Bills to Receive */}
       <section className="dashboard-section">
         <div className="section-header">
-          <h2 className="section-title">Recent Transactions</h2>
-          {transactions.length > 5 && (
-            <Link to="/transactions" className="section-link">
-              View all →
-            </Link>
-          )}
+          <h2 className="section-title">Upcoming Bills</h2>
+          <Link to="/transactions" className="section-link">
+            View all →
+          </Link>
         </div>
-        {recentTransactions.length === 0 ? (
-          <p className="empty-state">
-            No transactions yet. Add your first transaction above!
-          </p>
-        ) : (
-          <TransactionList
-            transactions={recentTransactions}
+        <div className="bills-grid">
+          <BillsTable
+            title="💸 Bills to Pay"
+            bills={billsToPay}
             categories={categories}
-            accounts={accounts}
-            onEditTransaction={onEditTransaction}
-            onDeleteTransaction={onDeleteTransaction}
+            emptyMessage="No bills to pay in the next 15 days 🎉"
+            accentClass="bills-table-card--pay"
           />
-        )}
+          <BillsTable
+            title="💰 Bills to Receive"
+            bills={billsToReceive}
+            categories={categories}
+            emptyMessage="No income expected in the next 15 days."
+            accentClass="bills-table-card--receive"
+          />
+        </div>
       </section>
     </div>
   );

@@ -104,6 +104,10 @@
   background: rgba(255, 107, 107, 0.05);
 }
 
+.summary-cards--overview {
+  grid-template-columns: 2fr;
+}
+
 .summary-card--total-balance {
   border-left: 3px solid #a78bfa;
   background: rgba(167, 139, 250, 0.06);
@@ -277,7 +281,178 @@
   background: rgba(74, 158, 255, 0.12);
 }
 
+/* ── Bills Grid (side-by-side) ── */
+.bills-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+/* ── Bills Table Card ── */
+.bills-table-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.bills-table-card--pay {
+  border-top: 3px solid var(--accent-red);
+}
+
+.bills-table-card--receive {
+  border-top: 3px solid var(--accent-green);
+}
+
+.bills-table-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.bills-empty-state {
+  font-size: 0.88rem;
+  color: var(--text-tertiary);
+  margin: 0;
+  padding: 12px 0;
+}
+
+/* ── Bills Table ── */
+.bills-table-wrapper {
+  overflow-x: auto;
+  /* Subtle scrollbar for overflow on small containers */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
+}
+
+.bills-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.83rem;
+}
+
+.bills-th {
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0 8px 8px 0;
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.bills-th--date,
+.bills-th--amount {
+  text-align: right;
+}
+
+.bills-tr {
+  transition: background 0.12s;
+}
+
+.bills-tr:hover {
+  background: var(--bg-tertiary);
+}
+
+.bills-tr--overdue {
+  background: rgba(255, 107, 107, 0.05);
+}
+
+.bills-tr--overdue:hover {
+  background: rgba(255, 107, 107, 0.1);
+}
+
+.bills-td {
+  padding: 9px 8px 9px 0;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+.bills-tr:last-child .bills-td {
+  border-bottom: none;
+}
+
+.bills-td--description {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.bills-description-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.bills-no-desc {
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.bills-td--category {
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 110px;
+}
+
+.bills-td--account {
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100px;
+}
+
+.bills-td--date {
+  text-align: right;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  font-family: "Courier New", monospace;
+  font-size: 0.8rem;
+}
+
+.bills-td--amount {
+  text-align: right;
+  white-space: nowrap;
+  font-family: "Courier New", monospace;
+  font-weight: 600;
+}
+
+/* ── Overdue badge ── */
+.bills-overdue-badge {
+  display: inline-block;
+  background: var(--accent-red);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  padding: 2px 5px;
+  line-height: 1.4;
+  flex-shrink: 0;
+}
+
 /* ── Responsive ── */
+@media (max-width: 1100px) {
+  .bills-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 900px) {
   .summary-cards {
     grid-template-columns: 1fr 1fr;
@@ -300,5 +475,14 @@
 
   .summary-card-amount {
     font-size: 1.3rem;
+  }
+
+  .bills-description-text {
+    max-width: 100px;
+  }
+
+  .bills-td--category,
+  .bills-td--account {
+    max-width: 80px;
   }
 }
