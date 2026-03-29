@@ -1,0 +1,397 @@
+.charts-page {
+  padding: 32px;
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+}
+
+/* ── Header ── */
+.charts-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.charts-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.charts-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.charts-subtitle {
+  font-size: 0.95rem;
+  color: var(--text-tertiary);
+  margin: 0;
+}
+
+/* ── Filter Bar ── */
+.charts-page .filter-bar {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px 24px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-end;
+}
+
+.charts-page .filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.charts-page .filter-group--date {
+  flex: 2;
+  min-width: 280px;
+}
+
+.charts-page .filter-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Date range */
+.charts-page .date-range-inputs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.charts-page .date-range-separator {
+  color: var(--text-tertiary);
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.charts-page .filter-input {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  padding: 8px 10px;
+  transition: border-color 0.15s;
+  font-family: inherit;
+}
+
+.charts-page .filter-input:focus {
+  outline: none;
+  border-color: var(--accent-blue);
+}
+
+.charts-page .filter-input--date {
+  width: 140px;
+}
+
+/* Date presets */
+.charts-page .date-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.charts-page .preset-btn {
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+  white-space: nowrap;
+}
+
+.charts-page .preset-btn:hover {
+  background: #333;
+  color: var(--text-primary);
+  border-color: #555;
+}
+
+.charts-page .preset-btn--active {
+  background: rgba(74, 158, 255, 0.15);
+  color: var(--accent-blue);
+  border-color: rgba(74, 158, 255, 0.4);
+}
+
+.charts-page .preset-btn--active:hover {
+  background: rgba(74, 158, 255, 0.22);
+  color: var(--accent-blue);
+  border-color: rgba(74, 158, 255, 0.5);
+}
+
+/* ── Sections ── */
+.charts-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.charts-section-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.charts-section-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.charts-section-desc {
+  font-size: 0.85rem;
+  color: var(--text-tertiary);
+  margin: 0;
+}
+
+/* ── Chart card ── */
+.chart-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 24px;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.chart-card:hover {
+  border-color: #4a4a4a;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+/* ── Pie charts row (two pie charts side by side) ── */
+.pie-charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.pie-charts-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.pie-chart-col-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+/* ── Pie chart layout ── */
+.chart-card--pie {
+  padding: 24px 24px 20px;
+}
+
+.pie-chart-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+.pie-chart-container {
+  flex: 0 0 260px;
+  min-width: 220px;
+}
+
+/* ── Pie legend ── */
+.pie-legend {
+  flex: 1;
+  min-width: 200px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-self: center;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.pie-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+}
+
+.pie-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.pie-legend-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+
+.pie-legend-pct {
+  font-size: 0.82rem;
+  color: var(--text-tertiary);
+  font-family: "Courier New", monospace;
+  flex-shrink: 0;
+}
+
+/* ── Custom tooltip ── */
+.chart-tooltip {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 10px 14px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  min-width: 160px;
+}
+
+.chart-tooltip-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 8px;
+}
+
+.chart-tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.88rem;
+  margin: 0 0 4px;
+}
+
+.chart-tooltip-row:last-child {
+  margin-bottom: 0;
+}
+
+.chart-tooltip-name {
+  color: inherit;
+  opacity: 0.85;
+}
+
+.chart-tooltip-value {
+  font-family: "Courier New", monospace;
+  font-weight: 600;
+}
+
+/* ── Empty state ── */
+.chart-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 48px 24px;
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.chart-empty-icon {
+  font-size: 2.5rem;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.chart-empty-state p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+
+.chart-empty-hint {
+  font-size: 0.82rem !important;
+  color: var(--text-tertiary) !important;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1100px) {
+  .pie-charts-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .charts-page .filter-group--date {
+    min-width: 100%;
+  }
+
+  .pie-chart-layout {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .pie-chart-container {
+    flex: none;
+    width: 100%;
+    max-width: 320px;
+  }
+
+  .pie-legend {
+    width: 100%;
+    max-height: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .charts-page {
+    padding: 20px 16px;
+    gap: 28px;
+  }
+
+  .charts-title {
+    font-size: 1.6rem;
+  }
+
+  .charts-page .filter-bar {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .charts-page .filter-input--date {
+    width: 120px;
+  }
+
+  .chart-card {
+    padding: 16px;
+  }
+
+  .pie-charts-row {
+    gap: 16px;
+  }
+}

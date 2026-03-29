@@ -5,9 +5,11 @@ import { apiService } from "./services/api";
 import { useTransactions } from "./hooks/useTransactions";
 import { useAccounts } from "./hooks/useAccounts";
 import { useCategories } from "./hooks/useCategories";
+import { useExchangeRates } from "./hooks/useExchangeRates";
 import { AppLayout } from "./components/layout/AppLayout";
 import { Dashboard } from "./pages/Dashboard";
 import { TransactionsPage } from "./pages/TransactionsPage";
+import { ChartsPage } from "./pages/ChartsPage";
 import { CreditCardBillModal } from "./components/CreditCardBillModal";
 
 function App() {
@@ -33,6 +35,8 @@ function App() {
 
   const { categories, createCategory, updateCategory, deleteCategory } =
     useCategories();
+
+  const { data: exchangeRates } = useExchangeRates();
 
   const loading = transactionsLoading || accountsLoading;
   const error = transactionsError || accountsError;
@@ -145,6 +149,7 @@ function App() {
                 transactions={transactions}
                 accounts={accounts}
                 categories={categories}
+                exchangeRates={exchangeRates}
                 onAddTransaction={openAddModal}
                 onEditTransaction={openEditModal}
                 onDeleteTransaction={handleDeleteTransaction}
@@ -162,6 +167,16 @@ function App() {
                 onAddTransaction={openAddModal}
                 onEditTransaction={openEditModal}
                 onDeleteTransaction={handleDeleteTransaction}
+              />
+            }
+          />
+          <Route
+            path="/charts"
+            element={
+              <ChartsPage
+                transactions={transactions}
+                categories={categories}
+                accounts={accounts}
               />
             }
           />

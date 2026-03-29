@@ -19,9 +19,10 @@ import (
 
 // Handlers groups all HTTP handler types for route registration
 type Handlers struct {
-	accounts     *handlers.AccountHandler
-	categories   *handlers.CategoryHandler
-	transactions *handlers.TransactionHandler
+	accounts      *handlers.AccountHandler
+	categories    *handlers.CategoryHandler
+	transactions  *handlers.TransactionHandler
+	exchangeRates *handlers.ExchangeRateHandler
 }
 
 func main() {
@@ -42,11 +43,19 @@ func main() {
 	ledger := services.NewLedgerService(store)
 	log.Println("Ledger service initialized")
 
+	exchangeRateService := services.NewExchangeRateService(store, ledger)
+	log.Println("Exchange rate service initialized")
+
+	// Start daily cron for exchange rate fetching (StartDailyCron spawns its own goroutine)
+	ctx := context.Background()
+	exchangeRateService.StartDailyCron(ctx)
+
 	// Initialize handlers
 	h := &Handlers{
-		transactions: handlers.NewTransactionHandler(ledger),
-		accounts:     handlers.NewAccountHandler(ledger),
-		categories:   handlers.NewCategoryHandler(ledger),
+		transactions:  handlers.NewTransactionHandler(ledger),
+		accounts:      handlers.NewAccountHandler(ledger),
+		categories:    handlers.NewCategoryHandler(ledger),
+		exchangeRates: handlers.NewExchangeRateHandler(exchangeRateService),
 	}
 
 	// Set up routes
@@ -259,6 +268,18 @@ func registerRoutes(mux *http.ServeMux, h *Handlers) {
 			case http.MethodDelete:
 				h.categories.DeleteCategory(w, r)
 			default:
+				handlers.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
+			}
+		},
+		mw...,
+	))
+
+	// Exchange rate routes
+	mux.HandleFunc("/api/exchange-rates/latest", middleware.Chain(
+		func(w http.ResponseWriter, r *http.Request) {
+			if r.Method == http.MethodGet {
+				h.exchangeRates.GetLatest(w, r)
+			} else {
 				handlers.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
 			}
 		},

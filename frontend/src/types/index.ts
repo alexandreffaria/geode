@@ -59,6 +59,8 @@ export interface TransferTransaction extends BaseTransaction {
   type: "transfer";
   from_account: string;
   to_account: string;
+  converted_amount?: number;
+  transfer_rate?: number;
   // No category field
 }
 
@@ -141,6 +143,7 @@ export type TransactionFormData =
       amount: string;
       from_account: string;
       to_account: string;
+      converted_amount?: string; // string because AmountField uses string values
       description?: string;
       date: string;
       paymentSchedule: PaymentSchedule;
@@ -148,6 +151,12 @@ export type TransactionFormData =
 
 export interface ApiError {
   error: string;
+}
+
+export interface ExchangeRate {
+  date: string;
+  base: string;
+  rates: Record<string, number>;
 }
 
 export interface Category {

@@ -28,4 +28,8 @@ type Storage interface {
 	GetCategoryByName(name string) (*models.Category, error) // kept for internal migration/lookup use
 	UpdateCategory(id string, category *models.Category) (*models.Category, error)
 	DeleteCategory(id string) error
+
+	// Exchange rate operations
+	GetExchangeRate(date string) (*models.ExchangeRate, error)
+	SaveExchangeRate(rate *models.ExchangeRate) error
 }

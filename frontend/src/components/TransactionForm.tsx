@@ -14,6 +14,7 @@ import type {
   Transaction,
   PaymentSchedule,
 } from "../types";
+import { CURRENCY_SYMBOLS } from "../constants";
 import { apiService } from "../services/api";
 import {
   getDefaultFormData,
@@ -65,6 +66,14 @@ const initializeFormData = (
   return getDefaultFormData(mainAccountName);
 };
 
+/**
+ * Maps a currency code to its symbol for display in the rate tag.
+ * Falls back to the currency code + " " if not found.
+ */
+function formatCurrencySymbol(currency: string): string {
+  return CURRENCY_SYMBOLS[currency] ?? currency + " ";
+}
+
 export function TransactionForm({
   accounts,
   categories,
@@ -82,6 +91,10 @@ export function TransactionForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Track currencies of the selected from/to accounts
+  const [fromCurrency, setFromCurrency] = useState<string>("");
+  const [toCurrency, setToCurrency] = useState<string>("");
+
   // Ref for the amount input — used to shift focus after a description suggestion is selected
   const amountInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -91,12 +104,50 @@ export function TransactionForm({
     [transactions],
   );
 
+  // Cross-currency: true only when both accounts are selected and have different currencies
+  const isCrossCurrency =
+    fromCurrency !== "" && toCurrency !== "" && fromCurrency !== toCurrency;
+
+  // When isCrossCurrency becomes false, clear converted_amount from form data
+  useEffect(() => {
+    if (
+      !isCrossCurrency &&
+      formData.type === "transfer" &&
+      formData.converted_amount
+    ) {
+      setFormData((prev) => {
+        if (prev.type !== "transfer") return prev;
+        const { converted_amount: _removed, ...rest } = prev;
+        return rest as TransactionFormData;
+      });
+    }
+  }, [isCrossCurrency]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Update form data when initialTransaction changes (for edit mode)
   useEffect(() => {
     if (mode === "edit" && initialTransaction) {
       setFormData(transactionToFormData(initialTransaction));
     }
   }, [mode, initialTransaction]);
+
+  // In edit mode, initialize fromCurrency and toCurrency from the accounts list
+  useEffect(() => {
+    if (
+      mode === "edit" &&
+      initialTransaction &&
+      initialTransaction.type === "transfer" &&
+      accounts.length > 0
+    ) {
+      const fromAcc = accounts.find(
+        (a) => a.name === initialTransaction.from_account,
+      );
+      const toAcc = accounts.find(
+        (a) => a.name === initialTransaction.to_account,
+      );
+      setFromCurrency(fromAcc?.currency ?? "");
+      setToCurrency(toAcc?.currency ?? "");
+    }
+  }, [mode, initialTransaction, accounts]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -136,6 +187,9 @@ export function TransactionForm({
   const handleTypeChange = (type: TransactionType) => {
     if (mode === "edit") return; // disabled in edit mode
     const { amount, description, date, paymentSchedule } = formData;
+    // Reset currency tracking when type changes away from transfer
+    setFromCurrency("");
+    setToCurrency("");
     // Reset form data when type changes (only in add mode)
     if (type === "transfer") {
       setFormData({
@@ -194,6 +248,16 @@ export function TransactionForm({
         : "Update Transaction";
 
   const isEditMode = mode === "edit";
+
+  // Compute the conversion rate for display
+  const conversionRate =
+    isCrossCurrency &&
+    formData.type === "transfer" &&
+    formData.converted_amount &&
+    parseFloat(formData.converted_amount) > 0 &&
+    parseFloat(formData.amount) > 0
+      ? parseFloat(formData.converted_amount) / parseFloat(formData.amount)
+      : null;
 
   return (
     <form onSubmit={handleSubmit} className="transaction-form">
@@ -264,6 +328,7 @@ export function TransactionForm({
               onChange={(from_account) =>
                 setFormData({ ...formData, from_account })
               }
+              onCurrencyChange={setFromCurrency}
               accounts={accounts}
               placeholder="From account…"
               excludeAccount={formData.to_account}
@@ -278,12 +343,34 @@ export function TransactionForm({
               onChange={(to_account) =>
                 setFormData({ ...formData, to_account })
               }
+              onCurrencyChange={setToCurrency}
               accounts={accounts}
               placeholder="To account…"
               excludeAccount={formData.from_account}
               disabled={loading}
             />
           </div>
+
+          {/* Converted amount field — only shown for cross-currency transfers */}
+          {isCrossCurrency && (
+            <>
+              <AmountField
+                label={toCurrency ? `${toCurrency} Amount` : "Converted Amount"}
+                value={formData.converted_amount ?? "0"}
+                onChange={(converted_amount) =>
+                  setFormData({ ...formData, converted_amount })
+                }
+                disabled={loading}
+              />
+              {conversionRate !== null && (
+                <span className="transfer-rate-tag">
+                  {fromCurrency} → {toCurrency}:{" "}
+                  {formatCurrencySymbol(toCurrency)}
+                  {conversionRate.toFixed(2)}
+                </span>
+              )}
+            </>
+          )}
         </>
       ) : (
         <>

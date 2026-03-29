@@ -194,15 +194,19 @@ func (s *LedgerService) updateAccountBalances(transaction *models.Transaction) e
 		}
 
 	case models.TransactionTypeTransfer:
-		// Money leaves from_account
+		// Money leaves from_account (always debited by the original amount)
 		if transaction.FromAccount != nil {
 			if err := s.applyBalanceChange(*transaction.FromAccount, transaction.Amount, false); err != nil {
 				return err
 			}
 		}
-		// Money enters to_account
+		// Money enters to_account (credited by ConvertedAmount if set and > 0, else Amount)
 		if transaction.ToAccount != nil {
-			if err := s.applyBalanceChange(*transaction.ToAccount, transaction.Amount, true); err != nil {
+			creditAmount := transaction.Amount
+			if transaction.ConvertedAmount != nil && *transaction.ConvertedAmount > 0 {
+				creditAmount = *transaction.ConvertedAmount
+			}
+			if err := s.applyBalanceChange(*transaction.ToAccount, creditAmount, true); err != nil {
 				return err
 			}
 		}
@@ -237,14 +241,18 @@ func (s *LedgerService) reverseAccountBalances(transaction *models.Transaction) 
 		}
 
 	case models.TransactionTypeTransfer:
-		// Reverse: add back to from_account, remove from to_account
+		// Reverse: add back to from_account (original amount), remove from to_account (ConvertedAmount if set)
 		if transaction.FromAccount != nil {
 			if err := s.applyBalanceChange(*transaction.FromAccount, transaction.Amount, true); err != nil {
 				return err
 			}
 		}
 		if transaction.ToAccount != nil {
-			if err := s.applyBalanceChange(*transaction.ToAccount, transaction.Amount, false); err != nil {
+			debitAmount := transaction.Amount
+			if transaction.ConvertedAmount != nil && *transaction.ConvertedAmount > 0 {
+				debitAmount = *transaction.ConvertedAmount
+			}
+			if err := s.applyBalanceChange(*transaction.ToAccount, debitAmount, false); err != nil {
 				return err
 			}
 		}

@@ -9,6 +9,7 @@ import type {
   CreateCategoryRequest,
   UpdateCategoryRequest,
   CreditCardBillSummary,
+  ExchangeRate,
 } from "../types";
 
 const API_BASE_URL = "/api";
@@ -31,6 +32,8 @@ interface TransactionPayload {
   from_account?: string;
   to_account?: string;
   installment_total?: number;
+  converted_amount?: number;
+  transfer_rate?: number;
 }
 
 /**
@@ -59,6 +62,13 @@ function buildTransactionPayload(
   if (data.type === "transfer") {
     payload.from_account = data.from_account;
     payload.to_account = data.to_account;
+    if (data.converted_amount && parseFloat(data.converted_amount) > 0) {
+      payload.converted_amount = parseFloat(data.converted_amount);
+      const amount = parseFloat(data.amount);
+      if (amount > 0) {
+        payload.transfer_rate = parseFloat(data.converted_amount) / amount;
+      }
+    }
   } else {
     // purchase or earning
     payload.account = data.account;
@@ -289,6 +299,11 @@ class ApiService {
       },
     );
     return this.handleResponse<Transaction>(response);
+  }
+
+  async getLatestExchangeRates(): Promise<ExchangeRate> {
+    const response = await fetch(`${API_BASE_URL}/exchange-rates/latest`);
+    return this.handleResponse<ExchangeRate>(response);
   }
 }
 

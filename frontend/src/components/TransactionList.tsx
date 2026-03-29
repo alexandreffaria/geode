@@ -1,4 +1,5 @@
-import type { Transaction, Category } from "../types";
+import type { Transaction, Category, Account } from "../types";
+import { CURRENCY_SYMBOLS } from "../constants";
 import {
   formatDate,
   formatCurrency,
@@ -12,6 +13,7 @@ import "./TransactionList.css";
 interface TransactionListProps {
   transactions: Transaction[];
   categories: Category[];
+  accounts?: Account[];
   onEditTransaction: (transaction: Transaction) => void;
   onDeleteTransaction: (transaction: Transaction) => void;
 }
@@ -53,6 +55,7 @@ const getAmountClass = (type: Transaction["type"]) => {
 export function TransactionList({
   transactions,
   categories,
+  accounts = [],
   onEditTransaction,
   onDeleteTransaction,
 }: TransactionListProps) {
@@ -145,6 +148,37 @@ export function TransactionList({
                             .currency || "BRL",
                         )}
                       </span>
+                      {transaction.type === "transfer" &&
+                        transaction.transfer_rate != null &&
+                        transaction.transfer_rate > 0 &&
+                        (() => {
+                          const fromAcc = accounts.find(
+                            (a) => a.name === transaction.from_account,
+                          );
+                          const toAcc = accounts.find(
+                            (a) => a.name === transaction.to_account,
+                          );
+                          if (
+                            fromAcc &&
+                            toAcc &&
+                            fromAcc.currency !== toAcc.currency
+                          ) {
+                            const symbol =
+                              CURRENCY_SYMBOLS[toAcc.currency] ??
+                              toAcc.currency + " ";
+                            return (
+                              <span className="transfer-rate-tag">
+                                {fromAcc.currency} → {toAcc.currency}: {symbol}
+                                {transaction.transfer_rate.toFixed(2)}
+                              </span>
+                            );
+                          }
+                          return (
+                            <span className="transfer-rate-tag">
+                              rate: {transaction.transfer_rate.toFixed(4)}
+                            </span>
+                          );
+                        })()}
                     </td>
                     <td className="actions-cell">
                       <button

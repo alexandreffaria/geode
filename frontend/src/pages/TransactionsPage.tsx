@@ -116,7 +116,7 @@ function applyFilters(
 
 export function TransactionsPage({
   transactions,
-  accounts: _accounts,
+  accounts,
   categories,
   onAddTransaction,
   onEditTransaction,
@@ -416,6 +416,7 @@ export function TransactionsPage({
         <TransactionList
           transactions={filteredTransactions}
           categories={categories}
+          accounts={accounts}
           onEditTransaction={onEditTransaction}
           onDeleteTransaction={onDeleteTransaction}
         />

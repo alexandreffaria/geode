@@ -130,6 +130,10 @@ export function transactionToFormData(
       ...base,
       from_account: transaction.from_account,
       to_account: transaction.to_account,
+      ...(transaction.converted_amount != null &&
+      transaction.converted_amount > 0
+        ? { converted_amount: String(transaction.converted_amount) }
+        : {}),
     } as unknown as TransactionFormData;
   }
 

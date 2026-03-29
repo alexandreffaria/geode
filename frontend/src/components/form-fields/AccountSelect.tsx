@@ -7,6 +7,7 @@ import "./AccountSelect.css";
 interface AccountSelectProps {
   value: string;
   onChange: (value: string) => void;
+  onCurrencyChange?: (currency: string) => void;
   accounts: Account[];
   placeholder?: string;
   excludeAccount?: string;
@@ -20,6 +21,7 @@ function formatBalance(balance: number, currency: string): string {
 export function AccountSelect({
   value,
   onChange,
+  onCurrencyChange,
   accounts,
   placeholder = "Search accounts…",
   excludeAccount,
@@ -36,14 +38,20 @@ export function AccountSelect({
   const handleAccountSelect = useCallback(
     (account: Account) => {
       onChange(account.name);
+      if (onCurrencyChange) {
+        onCurrencyChange(account.currency);
+      }
     },
-    [onChange],
+    [onChange, onCurrencyChange],
   );
 
   // AccountSelect-specific clear handler
   const handleClearAccount = useCallback(() => {
     onChange("");
-  }, [onChange]);
+    if (onCurrencyChange) {
+      onCurrencyChange("");
+    }
+  }, [onChange, onCurrencyChange]);
 
   const {
     inputValue,

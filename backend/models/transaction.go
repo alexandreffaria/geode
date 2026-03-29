@@ -67,8 +67,10 @@ type Transaction struct {
 	Category *string `json:"category,omitempty"`
 
 	// For transfer transactions only
-	FromAccount *string `json:"from_account,omitempty"`
-	ToAccount   *string `json:"to_account,omitempty"`
+	FromAccount     *string  `json:"from_account,omitempty"`
+	ToAccount       *string  `json:"to_account,omitempty"`
+	ConvertedAmount *float64 `json:"converted_amount,omitempty"`
+	TransferRate    *float64 `json:"transfer_rate,omitempty"`
 
 	// Installment support
 	InstallmentTotal   *int    `json:"installment_total,omitempty"`    // total number of installments (e.g. 12)
@@ -160,6 +162,9 @@ func (t *Transaction) Validate() error {
 		}
 		if t.Account != nil || t.Category != nil {
 			return errors.New("transfer transactions cannot have account or category fields")
+		}
+		if t.ConvertedAmount != nil && *t.ConvertedAmount <= 0 {
+			return errors.New("converted_amount must be greater than 0")
 		}
 
 	default:

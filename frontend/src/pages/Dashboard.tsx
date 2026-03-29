@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { Account, Category, Transaction } from "../types";
+import type { Account, Category, ExchangeRate, Transaction } from "../types";
 import { CURRENCY_SYMBOLS } from "../constants";
 import { TransactionList } from "../components/TransactionList";
 import { CreditCardBillModal } from "../components/CreditCardBillModal";
@@ -11,6 +11,7 @@ interface DashboardProps {
   transactions: Transaction[];
   accounts: Account[];
   categories: Category[];
+  exchangeRates: ExchangeRate | null;
   onAddTransaction: () => void;
   onEditTransaction: (transaction: Transaction) => void;
   onDeleteTransaction: (transaction: Transaction) => void;
@@ -35,6 +36,7 @@ export function Dashboard({
   transactions,
   accounts,
   categories,
+  exchangeRates,
   onAddTransaction,
   onEditTransaction,
   onDeleteTransaction,
@@ -97,6 +99,25 @@ export function Dashboard({
 
   const currencySymbol = CURRENCY_SYMBOLS[primaryCurrency] ?? primaryCurrency;
 
+  const mainAccount = accounts.find((a) => a.is_main);
+  const baseCurrency = mainAccount?.currency ?? primaryCurrency;
+
+  // Total balance across all active accounts, converted to baseCurrency
+  const totalBalance = useMemo(() => {
+    if (!exchangeRates || exchangeRates.base !== baseCurrency) return null;
+    let sum = 0;
+    for (const account of activeAccounts) {
+      if (account.currency === baseCurrency) {
+        sum += account.balance;
+      } else {
+        const rate = exchangeRates.rates[account.currency];
+        if (rate == null || rate === 0) continue;
+        sum += account.balance / rate;
+      }
+    }
+    return sum;
+  }, [exchangeRates, baseCurrency, activeAccounts]);
+
   // Total unpaid credit card debt
   const totalCreditDebt = useMemo(
     () =>
@@ -127,6 +148,25 @@ export function Dashboard({
           Add Transaction
         </button>
       </div>
+
+      {/* Total balance card */}
+      <section className="dashboard-section">
+        <h2 className="section-title">Overview</h2>
+        <div className="summary-cards">
+          <div className="summary-card summary-card--total-balance">
+            <div className="summary-card-label">Total Balance</div>
+            {totalBalance !== null ? (
+              <div className="summary-card-amount amount-positive">
+                {formatCurrency(totalBalance, baseCurrency)}
+              </div>
+            ) : (
+              <div className="summary-card-amount summary-card-amount--unavailable">
+                —
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
 
       {/* Monthly summary cards */}
       <section className="dashboard-section">
@@ -302,6 +342,7 @@ export function Dashboard({
           <TransactionList
             transactions={recentTransactions}
             categories={categories}
+            accounts={accounts}
             onEditTransaction={onEditTransaction}
             onDeleteTransaction={onDeleteTransaction}
           />

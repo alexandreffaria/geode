@@ -14,11 +14,12 @@ import (
 
 // JSONStorage implements Storage interface using JSON files
 type JSONStorage struct {
-	dataDir          string
-	transactionsFile string
-	accountsFile     string
-	categoriesFile   string
-	mu               sync.RWMutex
+	dataDir            string
+	transactionsFile   string
+	accountsFile       string
+	categoriesFile     string
+	exchangeRatesFile  string
+	mu                 sync.RWMutex
 }
 
 // NewJSONStorage creates a new JSON storage instance
@@ -29,10 +30,11 @@ func NewJSONStorage(dataDir string) (*JSONStorage, error) {
 	}
 
 	storage := &JSONStorage{
-		dataDir:          dataDir,
-		transactionsFile: filepath.Join(dataDir, "transactions.json"),
-		accountsFile:     filepath.Join(dataDir, "accounts.json"),
-		categoriesFile:   filepath.Join(dataDir, "categories.json"),
+		dataDir:           dataDir,
+		transactionsFile:  filepath.Join(dataDir, "transactions.json"),
+		accountsFile:      filepath.Join(dataDir, "accounts.json"),
+		categoriesFile:    filepath.Join(dataDir, "categories.json"),
+		exchangeRatesFile: filepath.Join(dataDir, "exchange_rates.json"),
 	}
 
 	// Initialize files if they don't exist
@@ -62,6 +64,13 @@ func (s *JSONStorage) initializeFiles() error {
 	// Initialize categories file
 	if _, err := os.Stat(s.categoriesFile); errors.Is(err, fs.ErrNotExist) {
 		if err := s.writeCategories([]*models.Category{}); err != nil {
+			return err
+		}
+	}
+
+	// Initialize exchange rates file
+	if _, err := os.Stat(s.exchangeRatesFile); errors.Is(err, fs.ErrNotExist) {
+		if err := s.writeExchangeRates([]*models.ExchangeRate{}); err != nil {
 			return err
 		}
 	}
@@ -632,4 +641,76 @@ func (s *JSONStorage) writeCategories(categories []*models.Category) error {
 	}
 
 	return os.WriteFile(s.categoriesFile, data, 0644)
+}
+
+// GetExchangeRate retrieves the exchange rate for a specific date.
+// Returns nil, nil if no entry is found for that date.
+func (s *JSONStorage) GetExchangeRate(date string) (*models.ExchangeRate, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	rates, err := s.readExchangeRates()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, r := range rates {
+		if r.Date == date {
+			return r, nil
+		}
+	}
+
+	return nil, nil
+}
+
+// SaveExchangeRate upserts an exchange rate entry by date.
+// If an entry for the same date already exists it is replaced; otherwise it is appended.
+func (s *JSONStorage) SaveExchangeRate(rate *models.ExchangeRate) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	rates, err := s.readExchangeRates()
+	if err != nil {
+		return err
+	}
+
+	found := false
+	for i, r := range rates {
+		if r.Date == rate.Date {
+			rates[i] = rate
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		rates = append(rates, rate)
+	}
+
+	return s.writeExchangeRates(rates)
+}
+
+// readExchangeRates reads exchange rates from the JSON file
+func (s *JSONStorage) readExchangeRates() ([]*models.ExchangeRate, error) {
+	data, err := os.ReadFile(s.exchangeRatesFile)
+	if err != nil {
+		return nil, err
+	}
+
+	var rates []*models.ExchangeRate
+	if err := json.Unmarshal(data, &rates); err != nil {
+		return nil, err
+	}
+
+	return rates, nil
+}
+
+// writeExchangeRates writes exchange rates to the JSON file
+func (s *JSONStorage) writeExchangeRates(rates []*models.ExchangeRate) error {
+	data, err := json.MarshalIndent(rates, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(s.exchangeRatesFile, data, 0644)
 }
