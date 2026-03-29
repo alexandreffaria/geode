@@ -10,6 +10,9 @@ import { AppLayout } from "./components/layout/AppLayout";
 import { Dashboard } from "./pages/Dashboard";
 import { TransactionsPage } from "./pages/TransactionsPage";
 import { ChartsPage } from "./pages/ChartsPage";
+import { AccountsPage } from "./pages/AccountsPage";
+import { CategoriesPage } from "./pages/CategoriesPage";
+import { ImporterPage } from "./pages/ImporterPage";
 import { CreditCardBillModal } from "./components/CreditCardBillModal";
 import {
   RecurringDeleteDialog,
@@ -179,10 +182,6 @@ function App() {
     [unrealizeTransaction, refetchAccounts],
   );
 
-  // ── Account/Category modal state ────────────────────────────────────────────
-  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
-  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-
   // ── Credit card bills modal state ───────────────────────────────────────────
   const [billsAccount, setBillsAccount] = useState<Account | null>(null);
 
@@ -202,26 +201,12 @@ function App() {
           element={
             <AppLayout
               modalState={modalState}
-              isAccountModalOpen={isAccountModalOpen}
-              isCategoryModalOpen={isCategoryModalOpen}
               transactions={transactions}
               accounts={accounts}
               categories={categories}
               mainAccountName={mainAccount?.name}
               onCloseModal={closeModal}
               onModalSuccess={handleModalSuccess}
-              onOpenAccountModal={() => setIsAccountModalOpen(true)}
-              onCloseAccountModal={() => setIsAccountModalOpen(false)}
-              onOpenCategoryModal={() => setIsCategoryModalOpen(true)}
-              onCloseCategoryModal={() => setIsCategoryModalOpen(false)}
-              onCreateAccount={createAccount}
-              onUpdateAccount={updateAccount}
-              onDeleteAccount={deleteAccount}
-              onSetMainAccount={setMainAccount}
-              onCreateCategory={createCategory}
-              onUpdateCategory={updateCategory}
-              onDeleteCategory={deleteCategory}
-              onViewBills={handleViewBills}
               error={error}
               onRetry={refetchData}
             />
@@ -268,10 +253,35 @@ function App() {
               />
             }
           />
+          <Route
+            path="/accounts"
+            element={
+              <AccountsPage
+                accounts={accounts}
+                onCreateAccount={createAccount}
+                onUpdateAccount={updateAccount}
+                onDeleteAccount={deleteAccount}
+                onSetMainAccount={setMainAccount}
+                onViewBills={handleViewBills}
+              />
+            }
+          />
+          <Route
+            path="/categories"
+            element={
+              <CategoriesPage
+                categories={categories}
+                onCreateCategory={createCategory}
+                onUpdateCategory={updateCategory}
+                onDeleteCategory={deleteCategory}
+              />
+            }
+          />
+          <Route path="/importer" element={<ImporterPage />} />
         </Route>
       </Routes>
 
-      {/* Global credit card bills modal (opened from AccountManagementModal) */}
+      {/* Global credit card bills modal (opened from AccountsPage) */}
       {billsAccount && (
         <CreditCardBillModal
           account={billsAccount}

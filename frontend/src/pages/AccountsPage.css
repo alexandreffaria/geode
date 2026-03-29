@@ -1,0 +1,76 @@
+.accounts-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: 32px 40px;
+  max-width: 800px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.accounts-page-header {
+  margin-bottom: 28px;
+}
+
+.accounts-page-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.accounts-page-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.accounts-page-section {
+  /* inherits am-section-title, am-account-list, etc. from AccountManagementModal.css */
+}
+
+/* Scope form-group styles to the page (mirrors the modal scoping) */
+.accounts-page .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.accounts-page .form-group label {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.accounts-page .form-group input[type="text"],
+.accounts-page .form-group input[type="number"],
+.accounts-page .form-group select {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  padding: 8px 10px;
+  transition: border-color 0.2s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.accounts-page .form-group input[type="text"]:focus,
+.accounts-page .form-group input[type="number"]:focus,
+.accounts-page .form-group select:focus {
+  border-color: var(--accent-blue);
+  outline: none;
+}
+
+.accounts-page .form-group input:disabled,
+.accounts-page .form-group select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .accounts-page {
+    padding: 20px 16px;
+  }
+}

@@ -1,16 +1,7 @@
+import { useState, useCallback } from "react";
 import { Outlet, NavLink } from "react-router-dom";
-import type {
-  Transaction,
-  Account,
-  Category,
-  CreateAccountRequest,
-  UpdateAccountRequest,
-  CreateCategoryRequest,
-  UpdateCategoryRequest,
-} from "../../types";
+import type { Transaction, Account, Category } from "../../types";
 import { TransactionModal } from "../TransactionModal";
-import { AccountManagementModal } from "../AccountManagementModal";
-import { CategoryManagementModal } from "../CategoryManagementModal";
 import "./AppLayout.css";
 
 interface AppLayoutProps {
@@ -19,59 +10,43 @@ interface AppLayoutProps {
     mode: "add" | "edit";
     transaction: Transaction | null;
   };
-  isAccountModalOpen: boolean;
-  isCategoryModalOpen: boolean;
   transactions: Transaction[];
   accounts: Account[];
   categories: Category[];
   mainAccountName?: string;
   onCloseModal: () => void;
   onModalSuccess: () => void;
-  onOpenAccountModal: () => void;
-  onCloseAccountModal: () => void;
-  onOpenCategoryModal: () => void;
-  onCloseCategoryModal: () => void;
-  onCreateAccount: (data: CreateAccountRequest) => Promise<void>;
-  onUpdateAccount: (name: string, data: UpdateAccountRequest) => Promise<void>;
-  onDeleteAccount: (name: string) => Promise<void>;
-  onSetMainAccount: (name: string) => Promise<void>;
-  onCreateCategory: (data: CreateCategoryRequest) => Promise<void>;
-  onUpdateCategory: (id: string, data: UpdateCategoryRequest) => Promise<void>;
-  onDeleteCategory: (id: string) => Promise<void>;
-  onViewBills: (account: Account) => void;
   error: string | null;
   onRetry: () => void;
 }
 
 export function AppLayout({
   modalState,
-  isAccountModalOpen,
-  isCategoryModalOpen,
   transactions,
   accounts,
   categories,
   mainAccountName,
   onCloseModal,
   onModalSuccess,
-  onOpenAccountModal,
-  onCloseAccountModal,
-  onOpenCategoryModal,
-  onCloseCategoryModal,
-  onCreateAccount,
-  onUpdateAccount,
-  onDeleteAccount,
-  onSetMainAccount,
-  onCreateCategory,
-  onUpdateCategory,
-  onDeleteCategory,
-  onViewBills,
   error,
   onRetry,
 }: AppLayoutProps) {
+  const [isCollapsed, setIsCollapsed] = useState(
+    () => localStorage.getItem("sidebar-collapsed") === "true",
+  );
+
+  const toggleCollapsed = useCallback(() => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem("sidebar-collapsed", String(next));
+      return next;
+    });
+  }, []);
+
   return (
     <div className="app-layout">
       {/* Sidebar */}
-      <aside className="app-sidebar">
+      <aside className="app-sidebar" data-collapsed={isCollapsed}>
         <div className="sidebar-brand">
           <span className="sidebar-brand-icon" aria-hidden="true">
             💰
@@ -80,6 +55,15 @@ export function AppLayout({
             <span className="sidebar-brand-name">Geode</span>
             <span className="sidebar-brand-tagline">Personal Finance</span>
           </div>
+          <button
+            type="button"
+            className="sidebar-collapse-btn"
+            onClick={toggleCollapsed}
+            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {isCollapsed ? "›" : "‹"}
+          </button>
         </div>
 
         <nav className="sidebar-nav" aria-label="Main navigation">
@@ -89,6 +73,7 @@ export function AppLayout({
             className={({ isActive }) =>
               `sidebar-nav-link${isActive ? " sidebar-nav-link--active" : ""}`
             }
+            title="Dashboard"
           >
             <span className="sidebar-nav-icon" aria-hidden="true">
               📊
@@ -100,6 +85,7 @@ export function AppLayout({
             className={({ isActive }) =>
               `sidebar-nav-link${isActive ? " sidebar-nav-link--active" : ""}`
             }
+            title="Transactions"
           >
             <span className="sidebar-nav-icon" aria-hidden="true">
               📋
@@ -111,36 +97,50 @@ export function AppLayout({
             className={({ isActive }) =>
               `sidebar-nav-link${isActive ? " sidebar-nav-link--active" : ""}`
             }
+            title="Charts"
           >
             <span className="sidebar-nav-icon" aria-hidden="true">
               📈
             </span>
             <span className="sidebar-nav-label">Charts</span>
           </NavLink>
-        </nav>
-
-        <div className="sidebar-actions">
-          <button
-            type="button"
-            className="sidebar-action-btn sidebar-action-btn--accounts"
-            onClick={onOpenAccountModal}
+          <NavLink
+            to="/accounts"
+            className={({ isActive }) =>
+              `sidebar-nav-link${isActive ? " sidebar-nav-link--active" : ""}`
+            }
+            title="Accounts"
           >
-            <span className="sidebar-action-icon" aria-hidden="true">
+            <span className="sidebar-nav-icon" aria-hidden="true">
               🏦
             </span>
-            <span className="sidebar-action-label">Accounts</span>
-          </button>
-          <button
-            type="button"
-            className="sidebar-action-btn sidebar-action-btn--categories"
-            onClick={onOpenCategoryModal}
+            <span className="sidebar-nav-label">Accounts</span>
+          </NavLink>
+          <NavLink
+            to="/categories"
+            className={({ isActive }) =>
+              `sidebar-nav-link${isActive ? " sidebar-nav-link--active" : ""}`
+            }
+            title="Categories"
           >
-            <span className="sidebar-action-icon" aria-hidden="true">
+            <span className="sidebar-nav-icon" aria-hidden="true">
               🏷️
             </span>
-            <span className="sidebar-action-label">Categories</span>
-          </button>
-        </div>
+            <span className="sidebar-nav-label">Categories</span>
+          </NavLink>
+          <NavLink
+            to="/importer"
+            className={({ isActive }) =>
+              `sidebar-nav-link${isActive ? " sidebar-nav-link--active" : ""}`
+            }
+            title="Importer"
+          >
+            <span className="sidebar-nav-icon" aria-hidden="true">
+              📥
+            </span>
+            <span className="sidebar-nav-label">Importer</span>
+          </NavLink>
+        </nav>
       </aside>
 
       {/* Main content */}
@@ -167,28 +167,6 @@ export function AppLayout({
         mainAccountName={mainAccountName}
         onClose={onCloseModal}
         onSuccess={onModalSuccess}
-      />
-
-      {/* Account management modal */}
-      <AccountManagementModal
-        isOpen={isAccountModalOpen}
-        accounts={accounts}
-        onClose={onCloseAccountModal}
-        onCreateAccount={onCreateAccount}
-        onUpdateAccount={onUpdateAccount}
-        onDeleteAccount={onDeleteAccount}
-        onSetMainAccount={onSetMainAccount}
-        onViewBills={onViewBills}
-      />
-
-      {/* Category management modal */}
-      <CategoryManagementModal
-        isOpen={isCategoryModalOpen}
-        categories={categories}
-        onClose={onCloseCategoryModal}
-        onCreateCategory={onCreateCategory}
-        onUpdateCategory={onUpdateCategory}
-        onDeleteCategory={onDeleteCategory}
       />
     </div>
   );

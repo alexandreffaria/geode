@@ -102,6 +102,19 @@ func registerRoutes(mux *http.ServeMux, h *Handlers) {
 	// Shared middleware applied to all routes
 	mw := []func(http.HandlerFunc) http.HandlerFunc{middleware.CORS, middleware.Logger}
 
+	// POST /api/transactions/import — must be registered BEFORE /api/transactions/group/ and
+	// /api/transactions/ to prevent the trailing-slash catch-all from shadowing this exact path.
+	mux.HandleFunc("/api/transactions/import", middleware.Chain(
+		func(w http.ResponseWriter, r *http.Request) {
+			if r.Method == http.MethodPost {
+				h.transactions.ImportTransactions(w, r)
+			} else {
+				handlers.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
+			}
+		},
+		mw...,
+	))
+
 	// Transaction routes
 	mux.HandleFunc("/api/transactions", middleware.Chain(
 		func(w http.ResponseWriter, r *http.Request) {
