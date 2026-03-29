@@ -208,7 +208,7 @@ func (s *JSONStorage) SaveAccount(account *models.Account) error {
 	// Check if account already exists
 	for _, a := range accounts {
 		if a.Name == account.Name {
-			return errors.New("account already exists")
+			return ErrAccountAlreadyExists
 		}
 	}
 
@@ -364,7 +364,7 @@ func (s *JSONStorage) SaveCategory(category *models.Category) error {
 	// Enforce uniqueness within (name, type, parent_id) scope
 	for _, c := range categories {
 		if c.Name == category.Name && c.Type == category.Type && parentIDEqual(c.ParentID, category.ParentID) {
-			return errors.New("category already exists")
+			return ErrCategoryAlreadyExists
 		}
 	}
 
@@ -389,6 +389,15 @@ func (s *JSONStorage) GetAllCategories() ([]*models.Category, error) {
 	return s.populateParentNames(categories), nil
 }
 
+// buildIDToNameIndex builds a map from category ID to category Name for O(1) parent lookups.
+func buildIDToNameIndex(categories []*models.Category) map[string]string {
+	idToName := make(map[string]string, len(categories))
+	for _, c := range categories {
+		idToName[c.ID] = c.Name
+	}
+	return idToName
+}
+
 // GetCategoryByID retrieves a category by its UUID ID field.
 func (s *JSONStorage) GetCategoryByID(id string) (*models.Category, error) {
 	s.mu.RLock()
@@ -399,11 +408,7 @@ func (s *JSONStorage) GetCategoryByID(id string) (*models.Category, error) {
 		return nil, err
 	}
 
-	// Build ID→Name index for O(1) parent lookup
-	idToName := make(map[string]string, len(categories))
-	for _, c := range categories {
-		idToName[c.ID] = c.Name
-	}
+	idToName := buildIDToNameIndex(categories)
 
 	for _, c := range categories {
 		if c.ID == id {
@@ -427,11 +432,7 @@ func (s *JSONStorage) GetCategoryByName(name string) (*models.Category, error) {
 		return nil, err
 	}
 
-	// Build ID→Name index for O(1) parent lookup
-	idToName := make(map[string]string, len(categories))
-	for _, c := range categories {
-		idToName[c.ID] = c.Name
-	}
+	idToName := buildIDToNameIndex(categories)
 
 	for _, c := range categories {
 		if c.Name == name {
@@ -487,11 +488,7 @@ func (s *JSONStorage) UpdateCategory(id string, category *models.Category) (*mod
 		return nil, err
 	}
 
-	// Build ID→Name index for O(1) parent lookup
-	idToName := make(map[string]string, len(categories))
-	for _, c := range categories {
-		idToName[c.ID] = c.Name
-	}
+	idToName := buildIDToNameIndex(categories)
 
 	// Populate ParentName for the returned value
 	result := *updated

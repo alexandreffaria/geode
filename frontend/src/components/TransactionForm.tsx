@@ -66,14 +66,6 @@ const initializeFormData = (
   return getDefaultFormData(mainAccountName);
 };
 
-/**
- * Maps a currency code to its symbol for display in the rate tag.
- * Falls back to the currency code + " " if not found.
- */
-function formatCurrencySymbol(currency: string): string {
-  return CURRENCY_SYMBOLS[currency] ?? currency + " ";
-}
-
 export function TransactionForm({
   accounts,
   categories,
@@ -379,7 +371,7 @@ export function TransactionForm({
               {conversionRate !== null && (
                 <span className="transfer-rate-tag">
                   {fromCurrency} → {toCurrency}:{" "}
-                  {formatCurrencySymbol(toCurrency)}
+                  {CURRENCY_SYMBOLS[toCurrency] ?? toCurrency + " "}
                   {conversionRate.toFixed(2)}
                 </span>
               )}

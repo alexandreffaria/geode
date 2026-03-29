@@ -168,38 +168,6 @@
   cursor: not-allowed;
 }
 
-.error-message {
-  padding: 12px;
-  background: #4a1e1e;
-  border: 1px solid #8a3a3a;
-  border-radius: 4px;
-  color: #ff6b6b;
-  font-size: 0.9rem;
-}
-
-.success-message {
-  padding: 12px;
-  background: #1e4a1e;
-  border: 1px solid #3a8a3a;
-  border-radius: 4px;
-  color: #6bff6b;
-  font-size: 0.9rem;
-}
-
-.transfer-rate-tag {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  background-color: var(--color-surface-raised, #2a2a3a);
-  color: var(--color-text-secondary, #a0a0b0);
-  border: 1px solid var(--color-border, #3a3a4a);
-  margin-top: 4px;
-  align-self: flex-start;
-}
-
 /* ── Virtual transaction info banner ── */
 .virtual-info-banner {
   display: flex;

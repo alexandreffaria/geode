@@ -123,16 +123,7 @@ export interface CreditCardBillSummary {
 // Note: date field is in YYYY-MM-DD format (matches backend)
 export type TransactionFormData =
   | {
-      type: "purchase";
-      amount: string;
-      account: string;
-      category: string;
-      description?: string;
-      date: string;
-      paymentSchedule: PaymentSchedule;
-    }
-  | {
-      type: "earning";
+      type: "purchase" | "earning";
       amount: string;
       account: string;
       category: string;

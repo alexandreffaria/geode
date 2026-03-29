@@ -79,7 +79,7 @@ type Transaction struct {
 
 	// Recurrence support
 	RecurrenceMonths  *int    `json:"recurrence_months,omitempty"`   // repeat every N months
-	RecurrenceUnit    *string `json:"recurrence_unit,omitempty"`     // "week" or "month" (nil defaults to "month")
+	RecurrenceUnit    *string `json:"recurrence_unit,omitempty"`     // "day", "week", or "month" (nil defaults to "month")
 	RecurrenceGroupID *string `json:"recurrence_group_id,omitempty"` // UUID linking recurrence instances
 
 	// Credit card support

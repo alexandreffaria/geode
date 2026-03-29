@@ -78,9 +78,6 @@ export function AccountManagementModal({
   const [addSaving, setAddSaving] = useState(false);
 
   const [deletingAccount, setDeletingAccount] = useState<string | null>(null);
-  const [_settingMainAccount, setSettingMainAccount] = useState<string | null>(
-    null,
-  );
 
   useModalAccessibility(isOpen, onClose, modalRef);
 
@@ -173,13 +170,10 @@ export function AccountManagementModal({
 
   // --- Set Main handler ---
   const handleSetMain = async (name: string) => {
-    setSettingMainAccount(name);
     try {
       await onSetMainAccount(name);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to set main account.");
-    } finally {
-      setSettingMainAccount(null);
     }
   };
 

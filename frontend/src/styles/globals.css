@@ -119,6 +119,105 @@
   font-size: 0.9rem;
 }
 
+/* Shared page header pattern */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.page-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.page-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+/* Shared add-transaction button */
+.add-transaction-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--accent-primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.add-transaction-button:hover {
+  background: var(--accent-hover);
+}
+
+.button-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* Shared modal form group */
+.modal-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.modal-form-group label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.modal-form-group input,
+.modal-form-group select {
+  padding: 10px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.modal-form-group input:focus,
+.modal-form-group select:focus {
+  border-color: var(--accent-primary);
+}
+
+/* Shared modal error banner */
+.modal-error-banner {
+  padding: 10px 14px;
+  background: rgba(220, 53, 69, 0.15);
+  border: 1px solid rgba(220, 53, 69, 0.3);
+  border-radius: 6px;
+  color: #ff6b6b;
+  font-size: 0.85rem;
+}
+
+/* Shared transfer rate tag */
+.transfer-rate-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
 /* Divider */
 .section-divider {
   border: none;

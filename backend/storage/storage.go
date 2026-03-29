@@ -1,6 +1,16 @@
 package storage
 
-import "github.com/meulindo/geode/backend/models"
+import (
+	"errors"
+
+	"github.com/meulindo/geode/backend/models"
+)
+
+// Sentinel errors for the storage package.
+var (
+	ErrCategoryAlreadyExists = errors.New("category already exists")
+	ErrAccountAlreadyExists  = errors.New("account already exists")
+)
 
 // Storage defines the interface for data persistence
 type Storage interface {

@@ -1,7 +1,7 @@
 /* ============================================================
    Category Management Modal
    Extends the shared modal-overlay / modal-container / modal-header
-   classes defined in TransactionModal.css.
+   classes defined in modal-base.css.
    ============================================================ */
 
 /* Wider container for category management */
@@ -125,10 +125,6 @@
   flex-shrink: 0;
   border-radius: 50%;
   object-fit: cover;
-}
-
-.category-avatar--gradient {
-  border-radius: 50%;
 }
 
 /* ---- Info block ---- */

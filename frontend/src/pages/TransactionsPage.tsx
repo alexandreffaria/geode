@@ -2,6 +2,12 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { Account, Category, Transaction } from "../types";
 import { resolveCategoryName } from "../utils/transactionUtils";
+import {
+  getFirstDayOfMonth,
+  getLastDayOfMonth,
+  getFirstDayOfYear,
+  getLastDayOfYear,
+} from "../utils/dateUtils";
 import { TransactionList } from "../components/TransactionList";
 import "./TransactionsPage.css";
 
@@ -14,28 +20,6 @@ interface TransactionsPageProps {
   onDeleteTransaction: (transaction: Transaction) => void;
   onRealizeTransaction: (transaction: Transaction) => void;
   onUnrealizeTransaction: (transaction: Transaction) => void;
-}
-
-// ── Date helpers ──────────────────────────────────────────────────────────────
-
-function toDateString(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
-function getFirstDayOfMonth(date: Date): string {
-  return toDateString(new Date(date.getFullYear(), date.getMonth(), 1));
-}
-
-function getLastDayOfMonth(date: Date): string {
-  return toDateString(new Date(date.getFullYear(), date.getMonth() + 1, 0));
-}
-
-function getFirstDayOfYear(date: Date): string {
-  return toDateString(new Date(date.getFullYear(), 0, 1));
-}
-
-function getLastDayOfYear(date: Date): string {
-  return toDateString(new Date(date.getFullYear(), 11, 31));
 }
 
 // ── Filter state ──────────────────────────────────────────────────────────────
@@ -52,8 +36,8 @@ interface FilterState {
 function getDefaultFilters(): FilterState {
   const now = new Date();
   return {
-    startDate: getFirstDayOfMonth(now),
-    endDate: getLastDayOfMonth(now),
+    startDate: getFirstDayOfMonth(now.getFullYear(), now.getMonth()),
+    endDate: getLastDayOfMonth(now.getFullYear(), now.getMonth()),
     selectedAccount: "",
     selectedCategory: "",
     searchQuery: "",
@@ -175,14 +159,14 @@ export function TransactionsPage({
     if (!urlMonth) return "";
     const [year, month] = urlMonth.split("-").map(Number);
     if (!year || !month) return "";
-    return getFirstDayOfMonth(new Date(year, month - 1, 1));
+    return getFirstDayOfMonth(year, month - 1);
   }, [urlMonth]);
 
   const urlEndDate = useMemo(() => {
     if (!urlMonth) return "";
     const [year, month] = urlMonth.split("-").map(Number);
     if (!year || !month) return "";
-    return getLastDayOfMonth(new Date(year, month - 1, 1));
+    return getLastDayOfMonth(year, month - 1);
   }, [urlMonth]);
 
   // Per-field state: URL params take priority over localStorage, which falls back to defaults
@@ -276,28 +260,35 @@ export function TransactionsPage({
     const now = new Date();
     switch (preset) {
       case "this-month":
-        setStartDate(getFirstDayOfMonth(now));
-        setEndDate(getLastDayOfMonth(now));
+        setStartDate(getFirstDayOfMonth(now.getFullYear(), now.getMonth()));
+        setEndDate(getLastDayOfMonth(now.getFullYear(), now.getMonth()));
         break;
       case "last-month": {
-        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        setStartDate(getFirstDayOfMonth(lastMonth));
-        setEndDate(getLastDayOfMonth(lastMonth));
+        const lastMonthYear =
+          now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+        const lastMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+        setStartDate(getFirstDayOfMonth(lastMonthYear, lastMonth));
+        setEndDate(getLastDayOfMonth(lastMonthYear, lastMonth));
         break;
       }
       case "last-3-months": {
-        const threeMonthsAgo = new Date(
+        const threeMonthsAgoDate = new Date(
           now.getFullYear(),
           now.getMonth() - 2,
           1,
         );
-        setStartDate(getFirstDayOfMonth(threeMonthsAgo));
-        setEndDate(getLastDayOfMonth(now));
+        setStartDate(
+          getFirstDayOfMonth(
+            threeMonthsAgoDate.getFullYear(),
+            threeMonthsAgoDate.getMonth(),
+          ),
+        );
+        setEndDate(getLastDayOfMonth(now.getFullYear(), now.getMonth()));
         break;
       }
       case "this-year":
-        setStartDate(getFirstDayOfYear(now));
-        setEndDate(getLastDayOfYear(now));
+        setStartDate(getFirstDayOfYear(now.getFullYear()));
+        setEndDate(getLastDayOfYear(now.getFullYear()));
         break;
       case "all-time":
         setStartDate("");
@@ -357,25 +348,36 @@ export function TransactionsPage({
   const activePreset = useMemo(() => {
     const now = new Date();
     if (
-      filters.startDate === getFirstDayOfMonth(now) &&
-      filters.endDate === getLastDayOfMonth(now)
+      filters.startDate ===
+        getFirstDayOfMonth(now.getFullYear(), now.getMonth()) &&
+      filters.endDate === getLastDayOfMonth(now.getFullYear(), now.getMonth())
     )
       return "this-month";
-    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastMonthYear =
+      now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+    const lastMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
     if (
-      filters.startDate === getFirstDayOfMonth(lastMonth) &&
-      filters.endDate === getLastDayOfMonth(lastMonth)
+      filters.startDate === getFirstDayOfMonth(lastMonthYear, lastMonth) &&
+      filters.endDate === getLastDayOfMonth(lastMonthYear, lastMonth)
     )
       return "last-month";
-    const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+    const threeMonthsAgoDate = new Date(
+      now.getFullYear(),
+      now.getMonth() - 2,
+      1,
+    );
     if (
-      filters.startDate === getFirstDayOfMonth(threeMonthsAgo) &&
-      filters.endDate === getLastDayOfMonth(now)
+      filters.startDate ===
+        getFirstDayOfMonth(
+          threeMonthsAgoDate.getFullYear(),
+          threeMonthsAgoDate.getMonth(),
+        ) &&
+      filters.endDate === getLastDayOfMonth(now.getFullYear(), now.getMonth())
     )
       return "last-3-months";
     if (
-      filters.startDate === getFirstDayOfYear(now) &&
-      filters.endDate === getLastDayOfYear(now)
+      filters.startDate === getFirstDayOfYear(now.getFullYear()) &&
+      filters.endDate === getLastDayOfYear(now.getFullYear())
     )
       return "this-year";
     if (filters.startDate === "" && filters.endDate === "") return "all-time";

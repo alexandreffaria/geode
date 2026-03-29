@@ -144,11 +144,6 @@ func (h *AccountHandler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 
 // SetMainAccount handles PUT /api/accounts/:name/main
 func (h *AccountHandler) SetMainAccount(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPut {
-		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-
 	path := pathParam(r, "/api/accounts/")
 	name := strings.TrimSuffix(path, "/main")
 	if name == "" {
@@ -179,11 +174,6 @@ func (h *AccountHandler) SetMainAccount(w http.ResponseWriter, r *http.Request) 
 
 // GetMainAccount handles GET /api/accounts/main
 func (h *AccountHandler) GetMainAccount(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-
 	account, err := h.ledger.GetMainAccount()
 	if err != nil {
 		log.Printf("Error getting main account: %v", err)

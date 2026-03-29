@@ -15,14 +15,12 @@ import (
 // ExchangeRateService handles fetching and caching exchange rates.
 type ExchangeRateService struct {
 	storage storage.Storage
-	ledger  *LedgerService
 }
 
 // NewExchangeRateService creates a new ExchangeRateService.
-func NewExchangeRateService(s storage.Storage, l *LedgerService) *ExchangeRateService {
+func NewExchangeRateService(s storage.Storage) *ExchangeRateService {
 	return &ExchangeRateService{
 		storage: s,
-		ledger:  l,
 	}
 }
 
@@ -97,16 +95,6 @@ func (s *ExchangeRateService) FetchAndSaveRates(ctx context.Context) error {
 // GetLatestRates returns the most recently stored exchange rate entry.
 // If no rates are stored yet, it fetches them first.
 func (s *ExchangeRateService) GetLatestRates(ctx context.Context) (*models.ExchangeRate, error) {
-	// Try to find the entry with the lexicographically greatest date (YYYY-MM-DD sorts correctly).
-	// We read all rates and pick the latest.
-	rates, err := s.storage.GetExchangeRate("") // sentinel: empty string won't match any date
-	if err != nil {
-		return nil, fmt.Errorf("failed to read exchange rates: %w", err)
-	}
-	// GetExchangeRate("") returns nil, nil — we need to enumerate all rates.
-	// Use a dedicated helper via the storage interface by fetching today first.
-	_ = rates // discard the nil result from the sentinel call
-
 	// Fetch today's rates if missing, then return the latest stored entry.
 	if err := s.FetchAndSaveRates(ctx); err != nil {
 		log.Printf("ExchangeRateService: background fetch failed: %v", err)

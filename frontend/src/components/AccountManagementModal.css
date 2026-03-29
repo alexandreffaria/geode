@@ -1,7 +1,7 @@
 /* ============================================================
    Account Management Modal
    Extends the shared modal-overlay / modal-container / modal-header
-   classes defined in TransactionModal.css.
+   classes defined in modal-base.css.
    ============================================================ */
 
 /* Wider container for account management */
@@ -88,10 +88,6 @@
   flex-shrink: 0;
   border-radius: 50%;
   object-fit: cover;
-}
-
-.account-avatar--gradient {
-  border-radius: 50%;
 }
 
 /* ---- Info block ---- */

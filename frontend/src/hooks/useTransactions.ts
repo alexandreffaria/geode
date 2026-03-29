@@ -1,44 +1,44 @@
-import { useState, useCallback, useEffect } from "react";
+import { useCallback } from "react";
 import type { Transaction } from "../types";
 import { apiService } from "../services/api";
+import { useResource } from "./useResource";
 
-export function useTransactions() {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export interface UseTransactionsResult {
+  transactions: Transaction[];
+  loading: boolean;
+  error: string | null;
+  refetch: () => Promise<void>;
+  realizeTransaction: (id: string) => Promise<void>;
+  unrealizeTransaction: (id: string) => Promise<void>;
+}
 
-  const refetch = useCallback(async () => {
-    setError(null);
-    setLoading(true);
-    try {
-      const data = await apiService.getTransactions();
-      setTransactions([...data].reverse());
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setLoading(false);
-    }
+export function useTransactions(): UseTransactionsResult {
+  const fetchTransactions = useCallback(async (): Promise<Transaction[]> => {
+    const data = await apiService.getTransactions();
+    return [...data].reverse();
   }, []);
 
-  useEffect(() => {
-    refetch();
-  }, [refetch]);
+  const {
+    data: transactions,
+    loading,
+    error,
+    refetch,
+  } = useResource<Transaction[]>(fetchTransactions, []);
 
-  const realizeTransaction = useCallback(async (id: string): Promise<void> => {
-    const realized = await apiService.realizeTransaction(id);
-    setTransactions((prev: Transaction[]) =>
-      prev.map((t: Transaction) => (t.id === id ? realized : t)),
-    );
-  }, []);
+  const realizeTransaction = useCallback(
+    async (id: string): Promise<void> => {
+      await apiService.realizeTransaction(id);
+      await refetch();
+    },
+    [refetch],
+  );
 
   const unrealizeTransaction = useCallback(
     async (id: string): Promise<void> => {
-      const unrealized = await apiService.unrealizeTransaction(id);
-      setTransactions((prev: Transaction[]) =>
-        prev.map((t: Transaction) => (t.id === id ? unrealized : t)),
-      );
+      await apiService.unrealizeTransaction(id);
+      await refetch();
     },
-    [],
+    [refetch],
   );
 
   return {

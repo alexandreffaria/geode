@@ -21,14 +21,9 @@ interface TransactionPayload {
   date: string;
   account?: string;
   category?: string;
-  currency?: string;
   recurrence_months?: number;
   recurrence_unit?: string;
   recurrence_group_id?: string;
-  installment_count?: number;
-  installment_group_id?: string;
-  source_account?: string;
-  destination_account?: string;
   from_account?: string;
   to_account?: string;
   installment_total?: number;
@@ -87,10 +82,6 @@ class ApiService {
       throw new Error(error.error);
     }
     return response.json() as Promise<T>;
-  }
-
-  private async handleVoidResponse(response: Response): Promise<void> {
-    await this.handleResponse<unknown>(response);
   }
 
   async getTransactions(): Promise<Transaction[]> {
@@ -152,7 +143,7 @@ class ApiService {
     const response = await fetch(`${API_BASE_URL}/transactions/${id}`, {
       method: "DELETE",
     });
-    return this.handleVoidResponse(response);
+    return this.handleResponse<void>(response);
   }
 
   async realizeTransaction(id: string): Promise<Transaction> {
@@ -212,7 +203,7 @@ class ApiService {
         method: "DELETE",
       },
     );
-    return this.handleVoidResponse(response);
+    return this.handleResponse<void>(response);
   }
 
   async setMainAccount(name: string): Promise<Account[]> {
@@ -284,7 +275,7 @@ class ApiService {
         method: "DELETE",
       },
     );
-    return this.handleVoidResponse(response);
+    return this.handleResponse<void>(response);
   }
 
   async getCreditCardBills(

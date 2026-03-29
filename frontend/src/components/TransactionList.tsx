@@ -5,7 +5,6 @@ import {
   formatCurrency,
   isTransactionPending,
   formatBillMonth,
-  getTransactionBillMonth,
   resolveCategoryName,
 } from "../utils/transactionUtils";
 import "./TransactionList.css";
@@ -88,7 +87,7 @@ export function TransactionList({
               {transactions.map((transaction) => {
                 const categoryField = getCategoryField(transaction, categories);
                 const pending = isTransactionPending(transaction);
-                const billMonth = getTransactionBillMonth(transaction);
+                const billMonth = transaction.credit_card_bill_month ?? null;
                 const isPaid = transaction.paid === true;
 
                 return (
@@ -155,11 +154,7 @@ export function TransactionList({
                       <span
                         className={`${getAmountClass(transaction.type)}${pending ? " amount--pending" : ""}`}
                       >
-                        {formatCurrency(
-                          transaction.amount,
-                          (transaction as unknown as { currency?: string })
-                            .currency || "BRL",
-                        )}
+                        {formatCurrency(transaction.amount, "BRL")}
                       </span>
                       {transaction.type === "transfer" &&
                         transaction.transfer_rate != null &&

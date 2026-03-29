@@ -2,17 +2,23 @@ interface DateFieldProps {
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
+  id?: string;
 }
 
 /**
  * Reusable date input field component
  */
-export function DateField({ value, onChange, disabled }: DateFieldProps) {
+export function DateField({
+  value,
+  onChange,
+  disabled,
+  id = "date",
+}: DateFieldProps) {
   return (
     <div className="form-group">
-      <label htmlFor="date">Date</label>
+      <label htmlFor={id}>Date</label>
       <input
-        id="date"
+        id={id}
         type="date"
         value={value}
         onChange={(e) => onChange(e.target.value)}

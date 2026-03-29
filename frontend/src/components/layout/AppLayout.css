@@ -132,7 +132,7 @@
 }
 
 .sidebar-action-btn--accounts:hover {
-  background: #2a2a3a;
+  background: var(--bg-tertiary);
   border-color: var(--accent-blue);
   color: var(--accent-blue);
   box-shadow: 0 2px 8px rgba(74, 158, 255, 0.15);
@@ -165,8 +165,8 @@
 
 /* Global error banner */
 .global-error {
-  background: #4a1e1e;
-  border-bottom: 2px solid #8a3a3a;
+  background: rgba(255, 107, 107, 0.1);
+  border-bottom: 2px solid rgba(255, 107, 107, 0.3);
   padding: 14px 24px;
   color: var(--accent-red);
   display: flex;

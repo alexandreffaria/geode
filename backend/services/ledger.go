@@ -438,7 +438,9 @@ func (s *LedgerService) DeleteTransaction(id string) error {
 	// Delete the transaction from storage
 	if err := s.storage.DeleteTransaction(id); err != nil {
 		// If deletion fails, try to restore the account balances
-		s.updateAccountBalances(transaction)
+		if rbErr := s.updateAccountBalances(transaction); rbErr != nil {
+			log.Printf("ERROR: failed to restore account balances after failed deletion of transaction %s: %v", id, rbErr)
+		}
 		return err
 	}
 

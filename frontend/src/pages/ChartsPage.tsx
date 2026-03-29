@@ -14,34 +14,18 @@ import {
   Cell,
   ResponsiveContainer,
 } from "recharts";
+import {
+  getFirstDayOfMonth,
+  getLastDayOfMonth,
+  getFirstDayOfYear,
+  getLastDayOfYear,
+} from "../utils/dateUtils";
 import "./ChartsPage.css";
 
 interface ChartsPageProps {
   transactions: Transaction[];
   categories: Category[];
   accounts: Account[];
-}
-
-// ── Date helpers ──────────────────────────────────────────────────────────────
-
-function toDateString(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
-function getFirstDayOfMonth(date: Date): string {
-  return toDateString(new Date(date.getFullYear(), date.getMonth(), 1));
-}
-
-function getLastDayOfMonth(date: Date): string {
-  return toDateString(new Date(date.getFullYear(), date.getMonth() + 1, 0));
-}
-
-function getFirstDayOfYear(date: Date): string {
-  return toDateString(new Date(date.getFullYear(), 0, 1));
-}
-
-function getLastDayOfYear(date: Date): string {
-  return toDateString(new Date(date.getFullYear(), 11, 31));
 }
 
 // ── Date filter state ─────────────────────────────────────────────────────────
@@ -55,8 +39,8 @@ interface DateFilterState {
 function getDefaultDateFilter(): DateFilterState {
   const now = new Date();
   return {
-    startDate: getFirstDayOfMonth(now),
-    endDate: getLastDayOfMonth(now),
+    startDate: getFirstDayOfMonth(now.getFullYear(), now.getMonth()),
+    endDate: getLastDayOfMonth(now.getFullYear(), now.getMonth()),
     showVirtual: false,
   };
 }
@@ -131,9 +115,8 @@ function buildMonthlyData(
   // monthly net going backwards from the end so the last month ends at the
   // current total. We compute forward cumulative net first, then offset.
   let cumulativeNet = 0;
-  const nets: number[] = sorted.map(([, { income, expenses }]) => {
+  sorted.forEach(([, { income, expenses }]) => {
     cumulativeNet += income - expenses;
-    return cumulativeNet;
   });
 
   // The final cumulative net should equal totalAccountBalance at the last month.
@@ -145,7 +128,7 @@ function buildMonthlyData(
 
   let runningBalance = startingBalance;
 
-  return sorted.map(([monthKey, { income, expenses }], i) => {
+  return sorted.map(([monthKey, { income, expenses }]) => {
     const [year, month] = monthKey.split("-");
     const date = new Date(Number(year), Number(month) - 1, 1);
     const label = date.toLocaleDateString("en-US", {
@@ -153,8 +136,6 @@ function buildMonthlyData(
       year: "numeric",
     });
     runningBalance += income - expenses;
-    // Use the pre-computed net to keep it consistent
-    void nets[i];
     return {
       month: label,
       monthKey,
@@ -174,43 +155,16 @@ interface CategorySlice {
   percentage: number;
 }
 
-function buildExpenseCategoryData(
+function buildCategoryData(
   transactions: Transaction[],
+  type: "purchase" | "earning",
   categories: Category[],
 ): CategorySlice[] {
   const map = new Map<string, number>();
 
   for (const t of transactions) {
     if (t.paid === false) continue;
-    if (t.type !== "purchase") continue;
-
-    const existing = map.get(t.category) ?? 0;
-    map.set(t.category, existing + t.amount);
-  }
-
-  const total = Array.from(map.values()).reduce((s, v) => s + v, 0);
-  if (total === 0) return [];
-
-  const entries = Array.from(map.entries()).sort(([, a], [, b]) => b - a);
-
-  return entries.map(([catId, value], index) => {
-    const cat = categories.find((c) => c.id === catId);
-    const name = cat?.name ?? catId;
-    const color = getCategoryColor(cat, index);
-    const percentage = total > 0 ? (value / total) * 100 : 0;
-    return { name, value, color, percentage };
-  });
-}
-
-function buildIncomeCategoryData(
-  transactions: Transaction[],
-  categories: Category[],
-): CategorySlice[] {
-  const map = new Map<string, number>();
-
-  for (const t of transactions) {
-    if (t.paid === false) continue;
-    if (t.type !== "earning") continue;
+    if (t.type !== type) continue;
 
     const existing = map.get(t.category) ?? 0;
     map.set(t.category, existing + t.amount);
@@ -345,37 +299,42 @@ export function ChartsPage({
       case "this-month":
         setDateFilter((prev) => ({
           ...prev,
-          startDate: getFirstDayOfMonth(now),
-          endDate: getLastDayOfMonth(now),
+          startDate: getFirstDayOfMonth(now.getFullYear(), now.getMonth()),
+          endDate: getLastDayOfMonth(now.getFullYear(), now.getMonth()),
         }));
         break;
       case "last-month": {
-        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const lastMonthYear =
+          now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+        const lastMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
         setDateFilter((prev) => ({
           ...prev,
-          startDate: getFirstDayOfMonth(lastMonth),
-          endDate: getLastDayOfMonth(lastMonth),
+          startDate: getFirstDayOfMonth(lastMonthYear, lastMonth),
+          endDate: getLastDayOfMonth(lastMonthYear, lastMonth),
         }));
         break;
       }
       case "last-3-months": {
-        const threeMonthsAgo = new Date(
+        const threeMonthsAgoDate = new Date(
           now.getFullYear(),
           now.getMonth() - 2,
           1,
         );
         setDateFilter((prev) => ({
           ...prev,
-          startDate: getFirstDayOfMonth(threeMonthsAgo),
-          endDate: getLastDayOfMonth(now),
+          startDate: getFirstDayOfMonth(
+            threeMonthsAgoDate.getFullYear(),
+            threeMonthsAgoDate.getMonth(),
+          ),
+          endDate: getLastDayOfMonth(now.getFullYear(), now.getMonth()),
         }));
         break;
       }
       case "this-year":
         setDateFilter((prev) => ({
           ...prev,
-          startDate: getFirstDayOfYear(now),
-          endDate: getLastDayOfYear(now),
+          startDate: getFirstDayOfYear(now.getFullYear()),
+          endDate: getLastDayOfYear(now.getFullYear()),
         }));
         break;
       case "all-time":
@@ -388,25 +347,38 @@ export function ChartsPage({
   const activePreset = useMemo(() => {
     const now = new Date();
     if (
-      dateFilter.startDate === getFirstDayOfMonth(now) &&
-      dateFilter.endDate === getLastDayOfMonth(now)
+      dateFilter.startDate ===
+        getFirstDayOfMonth(now.getFullYear(), now.getMonth()) &&
+      dateFilter.endDate ===
+        getLastDayOfMonth(now.getFullYear(), now.getMonth())
     )
       return "this-month";
-    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastMonthYear =
+      now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+    const lastMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
     if (
-      dateFilter.startDate === getFirstDayOfMonth(lastMonth) &&
-      dateFilter.endDate === getLastDayOfMonth(lastMonth)
+      dateFilter.startDate === getFirstDayOfMonth(lastMonthYear, lastMonth) &&
+      dateFilter.endDate === getLastDayOfMonth(lastMonthYear, lastMonth)
     )
       return "last-month";
-    const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+    const threeMonthsAgoDate = new Date(
+      now.getFullYear(),
+      now.getMonth() - 2,
+      1,
+    );
     if (
-      dateFilter.startDate === getFirstDayOfMonth(threeMonthsAgo) &&
-      dateFilter.endDate === getLastDayOfMonth(now)
+      dateFilter.startDate ===
+        getFirstDayOfMonth(
+          threeMonthsAgoDate.getFullYear(),
+          threeMonthsAgoDate.getMonth(),
+        ) &&
+      dateFilter.endDate ===
+        getLastDayOfMonth(now.getFullYear(), now.getMonth())
     )
       return "last-3-months";
     if (
-      dateFilter.startDate === getFirstDayOfYear(now) &&
-      dateFilter.endDate === getLastDayOfYear(now)
+      dateFilter.startDate === getFirstDayOfYear(now.getFullYear()) &&
+      dateFilter.endDate === getLastDayOfYear(now.getFullYear())
     )
       return "this-year";
     if (dateFilter.startDate === "" && dateFilter.endDate === "")
@@ -431,12 +403,12 @@ export function ChartsPage({
   );
 
   const expenseCategoryData = useMemo(
-    () => buildExpenseCategoryData(filteredTransactions, categories),
+    () => buildCategoryData(filteredTransactions, "purchase", categories),
     [filteredTransactions, categories],
   );
 
   const incomeCategoryData = useMemo(
-    () => buildIncomeCategoryData(filteredTransactions, categories),
+    () => buildCategoryData(filteredTransactions, "earning", categories),
     [filteredTransactions, categories],
   );
 

@@ -12,6 +12,7 @@ interface AmountFieldProps {
   disabled?: boolean;
   inputRef?: RefObject<HTMLInputElement | null>;
   label?: string;
+  id?: string;
 }
 
 /** Maximum allowed value in cents: 9,999,999.99 */
@@ -53,6 +54,7 @@ export function AmountField({
   disabled,
   inputRef,
   label = "Amount",
+  id = "amount",
 }: AmountFieldProps) {
   // Internal state: integer number of cents
   const [cents, setCents] = useState<number>(() => parseToCents(value));
@@ -119,10 +121,10 @@ export function AmountField({
 
   return (
     <div className="form-group">
-      <label htmlFor="amount">{label}</label>
+      <label htmlFor={id}>{label}</label>
       <input
         ref={inputRef}
-        id="amount"
+        id={id}
         type="text"
         inputMode="numeric"
         value={displayValue}

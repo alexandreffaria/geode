@@ -1,9 +1,8 @@
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useMemo } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import type { Account, Category, ExchangeRate, Transaction } from "../types";
 import { CURRENCY_SYMBOLS } from "../constants";
 import { TransactionList } from "../components/TransactionList";
-import { CreditCardBillModal } from "../components/CreditCardBillModal";
 import { Avatar } from "../components/ui/Avatar";
 import { formatCurrency } from "../utils/transactionUtils";
 import "./Dashboard.css";
@@ -17,6 +16,7 @@ interface DashboardProps {
   onEditTransaction: (transaction: Transaction) => void;
   onDeleteTransaction: (transaction: Transaction) => void;
   onRefreshData?: () => void;
+  onOpenBillModal?: (account: Account) => void;
 }
 
 function getCurrentMonthPrefix(): string {
@@ -41,7 +41,8 @@ export function Dashboard({
   onAddTransaction,
   onEditTransaction,
   onDeleteTransaction,
-  onRefreshData,
+  onRefreshData: _onRefreshData,
+  onOpenBillModal,
 }: DashboardProps) {
   const navigate = useNavigate();
   const activeAccounts = useMemo(
@@ -139,9 +140,6 @@ export function Dashboard({
       ),
     [creditCardAccounts],
   );
-
-  // Credit card bills modal state
-  const [billsAccount, setBillsAccount] = useState<Account | null>(null);
 
   return (
     <div className="dashboard">
@@ -354,7 +352,7 @@ export function Dashboard({
                   <button
                     type="button"
                     className="account-view-bills-btn-dashboard"
-                    onClick={() => setBillsAccount(account)}
+                    onClick={() => onOpenBillModal?.(account)}
                   >
                     📋 View Bills
                   </button>
@@ -370,9 +368,9 @@ export function Dashboard({
         <div className="section-header">
           <h2 className="section-title">Recent Transactions</h2>
           {transactions.length > 5 && (
-            <a href="/transactions" className="section-link">
+            <Link to="/transactions" className="section-link">
               View all →
-            </a>
+            </Link>
           )}
         </div>
         {recentTransactions.length === 0 ? (
@@ -389,19 +387,6 @@ export function Dashboard({
           />
         )}
       </section>
-
-      {/* Credit card bills modal */}
-      {billsAccount && (
-        <CreditCardBillModal
-          account={billsAccount}
-          accounts={accounts}
-          isOpen={billsAccount !== null}
-          onClose={() => setBillsAccount(null)}
-          onPaymentMade={() => {
-            onRefreshData?.();
-          }}
-        />
-      )}
     </div>
   );
 }

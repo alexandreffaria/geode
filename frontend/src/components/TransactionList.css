@@ -343,16 +343,3 @@
     width: 100%;
   }
 }
-
-.transfer-rate-tag {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  background-color: var(--color-surface-raised, #2a2a3a);
-  color: var(--color-text-secondary, #a0a0b0);
-  border: 1px solid var(--color-border, #3a3a4a);
-  margin-top: 4px;
-}

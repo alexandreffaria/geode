@@ -8,11 +8,6 @@ interface RecurringFieldProps {
 }
 
 export function RecurringField({ every, unit, onChange }: RecurringFieldProps) {
-  // Determine which preset is active (if any)
-  const activePreset = RECURRING_PRESETS.find(
-    (p) => p.every === every && p.unit === unit,
-  );
-
   const handlePresetClick = (preset: (typeof RECURRING_PRESETS)[number]) => {
     onChange(preset.every, preset.unit);
   };
@@ -43,7 +38,6 @@ export function RecurringField({ every, unit, onChange }: RecurringFieldProps) {
             type="number"
             min={1}
             value={unit === "day" ? every : ""}
-            placeholder={activePreset ? String(activePreset.every) : ""}
             onChange={(e) => {
               const days = Math.max(1, parseInt(e.target.value) || 1);
               onChange(days, "day");

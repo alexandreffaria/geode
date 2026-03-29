@@ -26,7 +26,7 @@ func WriteError(w http.ResponseWriter, statusCode int, message string) {
 }
 
 // WriteJSON writes a JSON response with the given status code and data
-func WriteJSON(w http.ResponseWriter, statusCode int, data interface{}) {
+func WriteJSON(w http.ResponseWriter, statusCode int, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 

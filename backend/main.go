@@ -43,7 +43,7 @@ func main() {
 	ledger := services.NewLedgerService(store)
 	log.Println("Ledger service initialized")
 
-	exchangeRateService := services.NewExchangeRateService(store, ledger)
+	exchangeRateService := services.NewExchangeRateService(store)
 	log.Println("Exchange rate service initialized")
 
 	// Start daily cron for exchange rate fetching (StartDailyCron spawns its own goroutine)

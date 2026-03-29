@@ -8,6 +8,7 @@ import (
 
 	"github.com/meulindo/geode/backend/models"
 	"github.com/meulindo/geode/backend/services"
+	"github.com/meulindo/geode/backend/storage"
 )
 
 // CategoryHandler handles category-related HTTP requests
@@ -80,7 +81,7 @@ func (h *CategoryHandler) CreateCategory(w http.ResponseWriter, r *http.Request)
 	category, err := h.service.CreateCategory(req.Name, req.Type, req.ParentID, req.GradientStart, req.GradientEnd, req.ImageURL)
 	if err != nil {
 		log.Printf("Error creating category: %v", err)
-		if err.Error() == "category already exists" {
+		if errors.Is(err, storage.ErrCategoryAlreadyExists) {
 			WriteError(w, http.StatusConflict, err.Error())
 		} else {
 			WriteError(w, http.StatusBadRequest, err.Error())

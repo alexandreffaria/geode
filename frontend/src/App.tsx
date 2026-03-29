@@ -186,6 +186,7 @@ function App() {
                 onEditTransaction={openEditModal}
                 onDeleteTransaction={handleDeleteTransaction}
                 onRefreshData={refetchData}
+                onOpenBillModal={handleViewBills}
               />
             }
           />

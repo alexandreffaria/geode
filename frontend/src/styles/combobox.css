@@ -129,12 +129,3 @@
   font-style: italic;
   text-align: center;
 }
-
-/* ---- Avatar row (avatar + label side by side) ---- */
-.combobox-avatar-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  min-width: 0;
-}

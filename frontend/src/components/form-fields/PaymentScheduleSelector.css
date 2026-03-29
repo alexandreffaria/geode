@@ -4,8 +4,8 @@
   flex-direction: column;
   gap: 12px;
   padding: 14px;
-  background: #222222;
-  border: 1px solid #3a3a3a;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
 }
 
@@ -18,10 +18,10 @@
 .schedule-type-btn {
   flex: 1;
   padding: 8px 12px;
-  background: #2a2a2a;
-  border: 1px solid #3a3a3a;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
-  color: #b0b0b0;
+  color: var(--text-secondary);
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
@@ -33,13 +33,13 @@
 
 .schedule-type-btn:hover:not(:disabled) {
   background: #333333;
-  color: #e0e0e0;
+  color: var(--text-primary);
   border-color: #4a4a4a;
 }
 
 .schedule-type-btn.active {
-  background: #4a9eff;
-  border-color: #4a9eff;
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
   color: #ffffff;
 }
 
@@ -59,21 +59,21 @@
   width: 80px;
   flex-shrink: 0;
   padding: 10px 12px;
-  background: #2a2a2a;
-  border: 1px solid #3a3a3a;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
-  color: #e0e0e0;
+  color: var(--text-primary);
   font-size: 1rem;
   transition: border-color 0.2s;
 }
 
 .recurring-input-row input:focus {
   outline: none;
-  border-color: #4a9eff;
+  border-color: var(--accent-blue);
 }
 
 .recurring-unit-label {
-  color: #b0b0b0;
+  color: var(--text-secondary);
   font-size: 0.9rem;
   white-space: nowrap;
 }
@@ -81,7 +81,7 @@
 /* Helper / hint text shown below sub-fields */
 .field-helper-text {
   font-size: 0.8rem;
-  color: #888888;
+  color: var(--text-tertiary);
   margin-top: 2px;
 }
 
@@ -104,10 +104,10 @@
 /* Individual preset button — smaller variant of .schedule-type-btn */
 .recurring-preset-btn {
   padding: 5px 10px;
-  background: #2a2a2a;
-  border: 1px solid #3a3a3a;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
-  color: #b0b0b0;
+  color: var(--text-secondary);
   font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
@@ -119,13 +119,13 @@
 
 .recurring-preset-btn:hover {
   background: #333333;
-  color: #e0e0e0;
+  color: var(--text-primary);
   border-color: #4a4a4a;
 }
 
 .recurring-preset-btn.active {
-  background: #4a9eff;
-  border-color: #4a9eff;
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
   color: #ffffff;
 }
 
@@ -140,7 +140,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #b0b0b0;
+  color: var(--text-secondary);
   font-size: 0.9rem;
   white-space: nowrap;
 }
@@ -150,21 +150,21 @@
   width: 70px;
   flex-shrink: 0;
   padding: 6px 10px;
-  background: #2a2a2a;
-  border: 1px solid #3a3a3a;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
-  color: #e0e0e0;
+  color: var(--text-primary);
   font-size: 0.9rem;
   transition: border-color 0.2s;
 }
 
 .recurring-custom-input:focus {
   outline: none;
-  border-color: #4a9eff;
+  border-color: var(--accent-blue);
 }
 
 /* Highlight the days input when it is the active selection */
 .recurring-custom-input.active {
-  border-color: #4a9eff;
+  border-color: var(--accent-blue);
   background: #1a2a3a;
 }

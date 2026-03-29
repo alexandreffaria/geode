@@ -33,16 +33,6 @@ export function formatBillMonth(month: string): string {
 }
 
 /**
- * Returns the bill month for a transaction.
- * Uses credit_card_bill_month if set, otherwise null.
- */
-export function getTransactionBillMonth(
-  transaction: Transaction,
-): string | null {
-  return transaction.credit_card_bill_month ?? null;
-}
-
-/**
  * Formats a date string (YYYY-MM-DD) for display.
  * Uses T12:00:00 to avoid UTC midnight off-by-one in local timezones.
  */
