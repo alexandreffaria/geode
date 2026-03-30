@@ -53,6 +53,17 @@
   transition: background 0.2s;
 }
 
+/* ---- Alternating day-group tints ---- */
+/* even groups: transparent (inherits container background) */
+.transaction-table tbody tr.day-group--even {
+  background: transparent;
+}
+
+/* odd groups: a very faint white overlay to visually separate adjacent days */
+.transaction-table tbody tr.day-group--odd {
+  background: rgba(255, 255, 255, 0.035);
+}
+
 .transaction-table tbody tr:hover {
   background: #252525;
 }

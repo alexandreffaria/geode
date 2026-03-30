@@ -72,8 +72,8 @@
 /* ── Monthly Summary Cards ── */
 .summary-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 16px;
+  grid-template-columns: 1fr;
+  gap: 12px;
 }
 
 .summary-card {
@@ -453,12 +453,6 @@
   }
 }
 
-@media (max-width: 900px) {
-  .summary-cards {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
 @media (max-width: 600px) {
   .dashboard {
     padding: 20px 16px;
@@ -467,10 +461,6 @@
 
   .dashboard-title {
     font-size: 1.6rem;
-  }
-
-  .summary-cards {
-    grid-template-columns: 1fr;
   }
 
   .summary-card-amount {

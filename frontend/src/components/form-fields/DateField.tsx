@@ -3,6 +3,7 @@ import {
   isoToDisplay,
   displayToIso,
   isValidDisplayDate,
+  expandTwoDigitYear,
 } from "../../utils/dateUtils";
 
 interface DateFieldProps {
@@ -65,18 +66,29 @@ export function DateField({
         digitsOnly.slice(4, 8);
     }
 
-    setDisplayValue(formatted);
+    // Expand 2-digit year immediately when the user finishes typing "DD/MM/YY"
+    const expanded = expandTwoDigitYear(formatted);
+    setDisplayValue(expanded);
 
     // Only propagate to parent when we have a complete, valid date
-    if (isValidDisplayDate(formatted)) {
-      onChange(displayToIso(formatted));
+    if (isValidDisplayDate(expanded)) {
+      onChange(displayToIso(expanded));
     }
   }
 
   /**
-   * On blur, if the field is incomplete or invalid, revert to the last valid ISO value.
+   * On blur, expand a 2-digit year if present, then revert to the last valid
+   * ISO value if the result is still incomplete or invalid.
    */
   function handleBlur() {
+    const expanded = expandTwoDigitYear(displayValue);
+    if (expanded !== displayValue) {
+      setDisplayValue(expanded);
+      if (isValidDisplayDate(expanded)) {
+        onChange(displayToIso(expanded));
+        return;
+      }
+    }
     if (!isValidDisplayDate(displayValue)) {
       // Revert to the current valid ISO value (or clear if none)
       setDisplayValue(isoToDisplay(value));

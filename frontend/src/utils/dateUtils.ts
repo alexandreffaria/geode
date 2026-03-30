@@ -56,6 +56,17 @@ export function displayToIso(display: string): string {
 }
 
 /**
+ * Expands a 2-digit year in a "DD/MM/YY" display string to a full 4-digit year.
+ * E.g. "25/03/25" → "25/03/2025". Returns the string unchanged if it already
+ * has a 4-digit year or does not match the "DD/MM/YY" pattern.
+ */
+export function expandTwoDigitYear(display: string): string {
+  const match = display.match(/^(\d{2}\/\d{2}\/)(\d{2})$/);
+  if (!match) return display;
+  return match[1] + "20" + match[2];
+}
+
+/**
  * Returns true if the given string is a valid "DD/MM/YYYY" date.
  */
 export function isValidDisplayDate(display: string): boolean {

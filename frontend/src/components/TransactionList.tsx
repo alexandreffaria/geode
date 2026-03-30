@@ -62,6 +62,15 @@ export function TransactionList({
   onRealizeTransaction,
   onUnrealizeTransaction,
 }: TransactionListProps) {
+  // Build a map from date string → day-group index (0-based, in order of first appearance).
+  // Adjacent day groups alternate between two subtle background tints via CSS classes.
+  const dateGroupIndex = new Map<string, number>();
+  for (const t of transactions) {
+    if (!dateGroupIndex.has(t.date)) {
+      dateGroupIndex.set(t.date, dateGroupIndex.size);
+    }
+  }
+
   return (
     <div className="transaction-list-container">
       <h2>Transaction History</h2>
@@ -89,20 +98,21 @@ export function TransactionList({
                 const pending = isTransactionPending(transaction);
                 const billMonth = transaction.credit_card_bill_month ?? null;
                 const isPaid = transaction.paid === true;
+                const dayGroupClass =
+                  dateGroupIndex.get(transaction.date)! % 2 === 0
+                    ? "day-group--even"
+                    : "day-group--odd";
 
                 return (
                   <tr
                     key={transaction.id}
-                    className={
-                      [
-                        pending ? "transaction-row--pending" : "",
-                        transaction.is_virtual
-                          ? "transaction-row--virtual"
-                          : "",
-                      ]
-                        .filter(Boolean)
-                        .join(" ") || undefined
-                    }
+                    className={[
+                      dayGroupClass,
+                      pending ? "transaction-row--pending" : "",
+                      transaction.is_virtual ? "transaction-row--virtual" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
                   >
                     <td className="date-cell">
                       {formatDate(transaction.date)}

@@ -255,6 +255,30 @@ export function TransactionForm({
     }
   };
 
+  // Keyboard hotkeys: Ctrl+1 → Expense, Ctrl+2 → Income, Ctrl+3 → Transfer
+  // Only active in add mode. The form is unmounted when the modal is closed,
+  // so the listener is automatically inactive when the modal is not open.
+  useEffect(() => {
+    if (mode === "edit") return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!e.ctrlKey) return;
+      if (e.key === "1" || e.code === "Numpad1") {
+        e.preventDefault();
+        handleTypeChange("purchase");
+      } else if (e.key === "2" || e.code === "Numpad2") {
+        e.preventDefault();
+        handleTypeChange("earning");
+      } else if (e.key === "3" || e.code === "Numpad3") {
+        e.preventDefault();
+        handleTypeChange("transfer");
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [mode, formData]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleScheduleChange = (schedule: PaymentSchedule) => {
     setFormData((prev) => ({ ...prev, paymentSchedule: schedule }));
   };
@@ -484,6 +508,9 @@ export function TransactionForm({
       {error && <div className="error-message">{error}</div>}
 
       <div className="form-actions">
+        <button type="submit" disabled={loading} className="submit-button">
+          {submitButtonText}
+        </button>
         {onCancel && (
           <button
             type="button"
@@ -494,9 +521,6 @@ export function TransactionForm({
             Cancel
           </button>
         )}
-        <button type="submit" disabled={loading} className="submit-button">
-          {submitButtonText}
-        </button>
       </div>
     </form>
   );

@@ -78,14 +78,14 @@
 .sidebar-collapse-btn {
   margin-left: auto;
   flex-shrink: 0;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: none;
   border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border-radius: 6px;
   color: var(--text-tertiary);
   font-size: 1rem;
   line-height: 1;
@@ -95,6 +95,10 @@
     color 0.15s,
     border-color 0.15s;
   padding: 0;
+  /* Always visible — never hidden */
+  opacity: 1;
+  pointer-events: auto;
+  z-index: 1;
 }
 
 .sidebar-collapse-btn:hover {
@@ -103,8 +107,19 @@
   border-color: var(--accent-blue);
 }
 
+/* When collapsed: the brand area becomes icon-only, so we need the button
+   to sit below the brand icon, centred in the 64px column. */
+.app-sidebar[data-collapsed="true"] .sidebar-brand {
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 0 0 20px;
+}
+
 .app-sidebar[data-collapsed="true"] .sidebar-collapse-btn {
   margin-left: 0;
+  width: 32px;
+  height: 32px;
 }
 
 /* Nav links */
