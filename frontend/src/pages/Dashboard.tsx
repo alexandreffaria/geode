@@ -231,13 +231,6 @@ export function Dashboard({
         sum += account.balance / rate;
       }
     }
-    // DIAGNOSTIC LOG: confirm totalBalance sign before display
-    console.log(
-      "[DEBUG] totalBalance computed:",
-      sum,
-      "| isNegative:",
-      sum < 0,
-    );
     return sum;
   }, [exchangeRates, baseCurrency, activeAccounts]);
 

@@ -20,8 +20,6 @@ import {
   getFirstDayOfYear,
   getLastDayOfYear,
   isoToDisplay,
-  displayToIso,
-  isValidDisplayDate,
 } from "../utils/dateUtils";
 import "./ChartsPage.css";
 
@@ -288,6 +286,9 @@ export function ChartsPage({
   const [dateFilter, setDateFilter] =
     useState<DateFilterState>(getDefaultDateFilter);
 
+  // Track whether the custom date picker panel is open
+  const [showCustomPicker, setShowCustomPicker] = useState(false);
+
   const setDateField = useCallback(
     <K extends keyof DateFilterState>(key: K, value: DateFilterState[K]) => {
       setDateFilter((prev) => ({ ...prev, [key]: value }));
@@ -305,6 +306,7 @@ export function ChartsPage({
           startDate: getFirstDayOfMonth(now.getFullYear(), now.getMonth()),
           endDate: getLastDayOfMonth(now.getFullYear(), now.getMonth()),
         }));
+        setShowCustomPicker(false);
         break;
       case "last-month": {
         const lastMonthYear =
@@ -315,6 +317,7 @@ export function ChartsPage({
           startDate: getFirstDayOfMonth(lastMonthYear, lastMonth),
           endDate: getLastDayOfMonth(lastMonthYear, lastMonth),
         }));
+        setShowCustomPicker(false);
         break;
       }
       case "last-3-months": {
@@ -331,6 +334,7 @@ export function ChartsPage({
           ),
           endDate: getLastDayOfMonth(now.getFullYear(), now.getMonth()),
         }));
+        setShowCustomPicker(false);
         break;
       }
       case "this-year":
@@ -339,9 +343,15 @@ export function ChartsPage({
           startDate: getFirstDayOfYear(now.getFullYear()),
           endDate: getLastDayOfYear(now.getFullYear()),
         }));
+        setShowCustomPicker(false);
         break;
       case "all-time":
         setDateFilter((prev) => ({ ...prev, startDate: "", endDate: "" }));
+        setShowCustomPicker(false);
+        break;
+      case "custom":
+        // Open the custom date picker panel without changing the current dates
+        setShowCustomPicker(true);
         break;
     }
   }, []);
@@ -386,7 +396,8 @@ export function ChartsPage({
       return "this-year";
     if (dateFilter.startDate === "" && dateFilter.endDate === "")
       return "all-time";
-    return null;
+    // Any other combination (including when showCustomPicker is open) is "custom"
+    return "custom";
   }, [dateFilter.startDate, dateFilter.endDate]);
 
   // Filter transactions by date range (and virtual flag) before computing chart aggregates
@@ -433,45 +444,6 @@ export function ChartsPage({
       <div className="filter-bar">
         <div className="filter-group filter-group--date">
           <label className="filter-label">Date Range</label>
-          <div className="date-range-inputs">
-            <input
-              type="text"
-              inputMode="numeric"
-              className="filter-input filter-input--date"
-              value={isoToDisplay(dateFilter.startDate)}
-              onChange={(e) => {
-                const display = e.target.value;
-                if (display === "") {
-                  setDateField("startDate", "");
-                } else if (isValidDisplayDate(display)) {
-                  setDateField("startDate", displayToIso(display));
-                }
-              }}
-              placeholder="DD/MM/YYYY"
-              pattern="\d{2}/\d{2}/\d{4}"
-              maxLength={10}
-              aria-label="Start date (DD/MM/YYYY)"
-            />
-            <span className="date-range-separator">→</span>
-            <input
-              type="text"
-              inputMode="numeric"
-              className="filter-input filter-input--date"
-              value={isoToDisplay(dateFilter.endDate)}
-              onChange={(e) => {
-                const display = e.target.value;
-                if (display === "") {
-                  setDateField("endDate", "");
-                } else if (isValidDisplayDate(display)) {
-                  setDateField("endDate", displayToIso(display));
-                }
-              }}
-              placeholder="DD/MM/YYYY"
-              pattern="\d{2}/\d{2}/\d{4}"
-              maxLength={10}
-              aria-label="End date (DD/MM/YYYY)"
-            />
-          </div>
           <div className="date-presets">
             {(
               [
@@ -480,6 +452,7 @@ export function ChartsPage({
                 { key: "last-3-months", label: "Last 3 Months" },
                 { key: "this-year", label: "This Year" },
                 { key: "all-time", label: "All Time" },
+                { key: "custom", label: "Custom" },
               ] as const
             ).map(({ key, label }) => (
               <button
@@ -492,6 +465,58 @@ export function ChartsPage({
               </button>
             ))}
           </div>
+
+          {/* Custom date picker — shown when "Custom" is active */}
+          {(activePreset === "custom" || showCustomPicker) && (
+            <div className="custom-date-picker">
+              <div className="custom-date-picker-row">
+                <div className="custom-date-field">
+                  <label
+                    className="custom-date-label"
+                    htmlFor="charts-custom-start-date"
+                  >
+                    From
+                  </label>
+                  <input
+                    id="charts-custom-start-date"
+                    type="date"
+                    className="filter-input filter-input--date-native"
+                    value={dateFilter.startDate}
+                    onChange={(e) => {
+                      setDateField("startDate", e.target.value);
+                    }}
+                    aria-label="Custom start date"
+                  />
+                </div>
+                <span className="date-range-separator">→</span>
+                <div className="custom-date-field">
+                  <label
+                    className="custom-date-label"
+                    htmlFor="charts-custom-end-date"
+                  >
+                    To
+                  </label>
+                  <input
+                    id="charts-custom-end-date"
+                    type="date"
+                    className="filter-input filter-input--date-native"
+                    value={dateFilter.endDate}
+                    onChange={(e) => {
+                      setDateField("endDate", e.target.value);
+                    }}
+                    min={dateFilter.startDate || undefined}
+                    aria-label="Custom end date"
+                  />
+                </div>
+              </div>
+              {dateFilter.startDate && dateFilter.endDate && (
+                <p className="custom-date-summary">
+                  {isoToDisplay(dateFilter.startDate)} →{" "}
+                  {isoToDisplay(dateFilter.endDate)}
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Show projected transactions toggle */}

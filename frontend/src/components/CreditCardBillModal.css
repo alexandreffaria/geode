@@ -33,7 +33,63 @@
   font-size: 0.9rem;
 }
 
-/* ---- Bill list ---- */
+/* ---- Month navigation ---- */
+.bill-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 10px 4px;
+}
+
+.bill-nav-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.bill-nav-btn {
+  background: var(--bg-tertiary, #2a2a2a);
+  border: 1px solid var(--border-color, #3a3a3a);
+  border-radius: 6px;
+  color: var(--text-primary, #e0e0e0);
+  font-size: 1.1rem;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    opacity 0.15s;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.bill-nav-btn:hover:not(:disabled) {
+  background: var(--bg-secondary, #1e1e1e);
+  border-color: var(--accent-blue, #4a9eff);
+  color: var(--accent-blue, #4a9eff);
+}
+
+.bill-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.bill-month-indicator {
+  font-size: 0.75rem;
+  color: var(--text-tertiary, #888);
+  letter-spacing: 0.03em;
+}
+
+/* ---- Bill list (legacy, kept for compatibility) ---- */
 .cc-bill-list {
   list-style: none;
   margin: 0;
@@ -52,11 +108,6 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  transition: border-color 0.2s;
-}
-
-.cc-bill-item:hover {
-  border-color: var(--accent-blue, #4a9eff);
 }
 
 /* ---- Bill item header ---- */
@@ -73,15 +124,31 @@
   color: var(--text-primary, #e0e0e0);
 }
 
+/* ---- Paid status badges ---- */
 .cc-bill-paid-badge {
-  background: rgba(107, 255, 107, 0.12);
-  border: 1px solid var(--accent-green, #6bff6b);
-  color: var(--accent-green, #6bff6b);
   border-radius: 12px;
   padding: 3px 10px;
   font-size: 0.8rem;
   font-weight: 600;
   white-space: nowrap;
+}
+
+.bill-status-paid {
+  background: rgba(107, 255, 107, 0.12);
+  border: 1px solid var(--accent-green, #6bff6b);
+  color: var(--accent-green, #6bff6b);
+}
+
+.bill-status-partial {
+  background: rgba(255, 193, 7, 0.12);
+  border: 1px solid #ffc107;
+  color: #ffc107;
+}
+
+.bill-status-unpaid {
+  background: rgba(255, 107, 107, 0.1);
+  border: 1px solid var(--accent-red, #ff6b6b);
+  color: var(--accent-red, #ff6b6b);
 }
 
 .cc-bill-pay-btn {
@@ -191,6 +258,96 @@
   margin: 0;
 }
 
+/* ---- Transaction list ---- */
+.bill-transactions {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bill-transactions-title {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary, #b0b0b0);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bill-transactions-count {
+  background: var(--bg-tertiary, #2a2a2a);
+  border: 1px solid var(--border-color, #3a3a3a);
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-tertiary, #888);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.bill-transactions-empty {
+  padding: 16px;
+  font-size: 0.85rem;
+}
+
+.bill-transactions-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bill-transaction-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 12px;
+  background: var(--bg-tertiary, #2a2a2a);
+  border: 1px solid var(--border-color, #3a3a3a);
+  border-radius: 6px;
+  transition: border-color 0.15s;
+}
+
+.bill-transaction-item:hover {
+  border-color: var(--accent-blue, #4a9eff);
+}
+
+.bill-transaction-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bill-transaction-desc {
+  font-size: 0.9rem;
+  color: var(--text-primary, #e0e0e0);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bill-transaction-date {
+  font-size: 0.75rem;
+  color: var(--text-tertiary, #888);
+}
+
+.bill-transaction-amount {
+  font-family: "Courier New", monospace;
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 /* ============================================================
    Responsive
    ============================================================ */
@@ -201,5 +358,11 @@
 
   .cc-bill-item-header {
     flex-wrap: wrap;
+  }
+
+  .bill-nav-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
   }
 }

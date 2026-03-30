@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { Account, Category, Transaction } from "../types";
 import { resolveCategoryName } from "../utils/transactionUtils";
@@ -8,8 +8,6 @@ import {
   getFirstDayOfYear,
   getLastDayOfYear,
   isoToDisplay,
-  displayToIso,
-  isValidDisplayDate,
 } from "../utils/dateUtils";
 import { TransactionList } from "../components/TransactionList";
 import "./TransactionsPage.css";
@@ -151,6 +149,11 @@ export function TransactionsPage({
 }: TransactionsPageProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const defaults = getDefaultFilters();
+  // Track whether the custom date picker panel is open
+  const [showCustomPicker, setShowCustomPicker] = useState(false);
+  // Refs for the custom date inputs (native date pickers)
+  const customStartRef = useRef<HTMLInputElement>(null);
+  const customEndRef = useRef<HTMLInputElement>(null);
 
   // Read URL query params (set when navigating from Dashboard account cards)
   // These take priority over localStorage on initial mount.
@@ -201,6 +204,31 @@ export function TransactionsPage({
     // Only run on mount — intentionally omitting deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Keyboard shortcut: press "n" to open the new transaction modal
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "n") return;
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+
+      const active = document.activeElement;
+      if (active instanceof HTMLElement) {
+        const tag = active.tagName.toLowerCase();
+        if (
+          tag === "input" ||
+          tag === "textarea" ||
+          tag === "select" ||
+          active.getAttribute("contenteditable") === "true"
+        )
+          return;
+      }
+
+      onAddTransaction();
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onAddTransaction]);
 
   // Persist each field to localStorage whenever it changes
   useEffect(() => {
@@ -275,6 +303,7 @@ export function TransactionsPage({
       case "this-month":
         setStartDate(getFirstDayOfMonth(now.getFullYear(), now.getMonth()));
         setEndDate(getLastDayOfMonth(now.getFullYear(), now.getMonth()));
+        setShowCustomPicker(false);
         break;
       case "last-month": {
         const lastMonthYear =
@@ -282,6 +311,7 @@ export function TransactionsPage({
         const lastMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
         setStartDate(getFirstDayOfMonth(lastMonthYear, lastMonth));
         setEndDate(getLastDayOfMonth(lastMonthYear, lastMonth));
+        setShowCustomPicker(false);
         break;
       }
       case "last-3-months": {
@@ -297,15 +327,22 @@ export function TransactionsPage({
           ),
         );
         setEndDate(getLastDayOfMonth(now.getFullYear(), now.getMonth()));
+        setShowCustomPicker(false);
         break;
       }
       case "this-year":
         setStartDate(getFirstDayOfYear(now.getFullYear()));
         setEndDate(getLastDayOfYear(now.getFullYear()));
+        setShowCustomPicker(false);
         break;
       case "all-time":
         setStartDate("");
         setEndDate("");
+        setShowCustomPicker(false);
+        break;
+      case "custom":
+        // Open the custom date picker panel without changing the current dates
+        setShowCustomPicker(true);
         break;
     }
   }, []);
@@ -394,7 +431,8 @@ export function TransactionsPage({
     )
       return "this-year";
     if (filters.startDate === "" && filters.endDate === "") return "all-time";
-    return null;
+    // Any other combination (including when showCustomPicker is open) is "custom"
+    return "custom";
   }, [filters.startDate, filters.endDate]);
 
   // Category type lookup for display (keyed by ID)
@@ -421,6 +459,7 @@ export function TransactionsPage({
     setSelectedCategory(d.selectedCategory);
     setSearchQuery(d.searchQuery);
     setShowVirtual(d.showVirtual);
+    setShowCustomPicker(false);
   };
 
   return (
@@ -474,45 +513,6 @@ export function TransactionsPage({
         {/* Date range */}
         <div className="filter-group filter-group--date">
           <label className="filter-label">Date Range</label>
-          <div className="date-range-inputs">
-            <input
-              type="text"
-              inputMode="numeric"
-              className="filter-input filter-input--date"
-              value={isoToDisplay(filters.startDate)}
-              onChange={(e) => {
-                const display = e.target.value;
-                if (display === "") {
-                  setFilter("startDate", "");
-                } else if (isValidDisplayDate(display)) {
-                  setFilter("startDate", displayToIso(display));
-                }
-              }}
-              placeholder="DD/MM/YYYY"
-              pattern="\d{2}/\d{2}/\d{4}"
-              maxLength={10}
-              aria-label="Start date (DD/MM/YYYY)"
-            />
-            <span className="date-range-separator">→</span>
-            <input
-              type="text"
-              inputMode="numeric"
-              className="filter-input filter-input--date"
-              value={isoToDisplay(filters.endDate)}
-              onChange={(e) => {
-                const display = e.target.value;
-                if (display === "") {
-                  setFilter("endDate", "");
-                } else if (isValidDisplayDate(display)) {
-                  setFilter("endDate", displayToIso(display));
-                }
-              }}
-              placeholder="DD/MM/YYYY"
-              pattern="\d{2}/\d{2}/\d{4}"
-              maxLength={10}
-              aria-label="End date (DD/MM/YYYY)"
-            />
-          </div>
           <div className="date-presets">
             {(
               [
@@ -521,6 +521,7 @@ export function TransactionsPage({
                 { key: "last-3-months", label: "Last 3 Months" },
                 { key: "this-year", label: "This Year" },
                 { key: "all-time", label: "All Time" },
+                { key: "custom", label: "Custom" },
               ] as const
             ).map(({ key, label }) => (
               <button
@@ -533,6 +534,60 @@ export function TransactionsPage({
               </button>
             ))}
           </div>
+
+          {/* Custom date picker — shown when "Custom" is active */}
+          {(activePreset === "custom" || showCustomPicker) && (
+            <div className="custom-date-picker">
+              <div className="custom-date-picker-row">
+                <div className="custom-date-field">
+                  <label
+                    className="custom-date-label"
+                    htmlFor="custom-start-date"
+                  >
+                    From
+                  </label>
+                  <input
+                    ref={customStartRef}
+                    id="custom-start-date"
+                    type="date"
+                    className="filter-input filter-input--date-native"
+                    value={filters.startDate}
+                    onChange={(e) => {
+                      setFilter("startDate", e.target.value);
+                    }}
+                    aria-label="Custom start date"
+                  />
+                </div>
+                <span className="date-range-separator">→</span>
+                <div className="custom-date-field">
+                  <label
+                    className="custom-date-label"
+                    htmlFor="custom-end-date"
+                  >
+                    To
+                  </label>
+                  <input
+                    ref={customEndRef}
+                    id="custom-end-date"
+                    type="date"
+                    className="filter-input filter-input--date-native"
+                    value={filters.endDate}
+                    onChange={(e) => {
+                      setFilter("endDate", e.target.value);
+                    }}
+                    min={filters.startDate || undefined}
+                    aria-label="Custom end date"
+                  />
+                </div>
+              </div>
+              {filters.startDate && filters.endDate && (
+                <p className="custom-date-summary">
+                  {isoToDisplay(filters.startDate)} →{" "}
+                  {isoToDisplay(filters.endDate)}
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Account filter */}

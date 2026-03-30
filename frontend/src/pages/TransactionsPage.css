@@ -140,6 +140,51 @@
   width: 140px;
 }
 
+.filter-input--date-native {
+  width: 160px;
+  color-scheme: dark;
+}
+
+/* Custom date picker panel */
+.custom-date-picker {
+  margin-top: 10px;
+  padding: 14px 16px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.custom-date-picker-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.custom-date-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.custom-date-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.custom-date-summary {
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+  font-family: "Courier New", monospace;
+  margin: 0;
+}
+
 /* Date presets */
 .date-presets {
   display: flex;

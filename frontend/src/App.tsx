@@ -287,6 +287,7 @@ function App() {
         <CreditCardBillModal
           account={billsAccount}
           accounts={accounts}
+          transactions={transactions}
           isOpen={true}
           onClose={() => setBillsAccount(null)}
           onPaymentMade={refetchData}
