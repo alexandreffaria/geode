@@ -46,6 +46,41 @@ function getDefaultDateFilter(): DateFilterState {
   };
 }
 
+// ── Credit card payment exclusion ────────────────────────────────────────────
+
+/**
+ * Category names (case-insensitive) that represent paying the monthly credit
+ * card balance.  These transactions are already represented by the individual
+ * purchases on the card, so including them in charts would double-count
+ * spending.  Both raw-string category names (imported data) and UUID-based
+ * categories whose resolved name matches are excluded.
+ */
+const CREDIT_CARD_PAYMENT_CATEGORY_NAMES = new Set([
+  "pagamento de fatura",
+  "credit card payment",
+]);
+
+/**
+ * Returns true when a transaction's category resolves to a credit-card-payment
+ * category and should therefore be excluded from chart calculations.
+ *
+ * The `category` field on a transaction may be:
+ *   • A UUID  → look up the Category object and compare its name.
+ *   • A raw name string (imported/legacy data) → compare directly.
+ */
+function isCreditCardPaymentCategory(
+  categoryField: string,
+  categories: Category[],
+): boolean {
+  if (!categoryField) return false;
+
+  // Try UUID lookup first
+  const cat = categories.find((c) => c.id === categoryField);
+  const name = cat ? cat.name : categoryField;
+
+  return CREDIT_CARD_PAYMENT_CATEGORY_NAMES.has(name.toLowerCase());
+}
+
 // ── Color helpers ─────────────────────────────────────────────────────────────
 
 const FALLBACK_COLORS = [
@@ -83,6 +118,7 @@ interface MonthDataPoint {
 function buildMonthlyData(
   transactions: Transaction[],
   accounts: Account[],
+  categories: Category[],
 ): MonthDataPoint[] {
   const map = new Map<string, { income: number; expenses: number }>();
 
@@ -91,6 +127,8 @@ function buildMonthlyData(
     if (t.paid === false) continue;
     // Only count purchases and earnings
     if (t.type !== "purchase" && t.type !== "earning") continue;
+    // Exclude credit card payment transactions (would double-count spending)
+    if (isCreditCardPaymentCategory(t.category, categories)) continue;
 
     const monthKey = t.date.slice(0, 7); // "YYYY-MM"
     const existing = map.get(monthKey) ?? { income: 0, expenses: 0 };
@@ -166,6 +204,8 @@ function buildCategoryData(
   for (const t of transactions) {
     if (t.paid === false) continue;
     if (t.type !== type) continue;
+    // Exclude credit card payment transactions (would double-count spending)
+    if (isCreditCardPaymentCategory(t.category, categories)) continue;
 
     const existing = map.get(t.category) ?? 0;
     map.set(t.category, existing + t.amount);
@@ -412,8 +452,8 @@ export function ChartsPage({
   }, [transactions, dateFilter]);
 
   const monthlyData = useMemo(
-    () => buildMonthlyData(filteredTransactions, accounts),
-    [filteredTransactions, accounts],
+    () => buildMonthlyData(filteredTransactions, accounts, categories),
+    [filteredTransactions, accounts, categories],
   );
 
   const expenseCategoryData = useMemo(
