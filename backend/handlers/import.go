@@ -147,26 +147,35 @@ func (h *TransactionHandler) ImportTransactions(w http.ResponseWriter, r *http.R
 // any that do not yet exist in storage. The accountMap is updated in-place so that
 // subsequent calls within the same import request see the newly created accounts.
 //
-// For purchase/earning rows the "account" field is checked.
-// For transfer rows both "from_account" and "to_account" are checked.
+// For purchase/earning rows the "account" field is checked, using account_type to
+// determine the correct account type when auto-creating.
+// For transfer rows both "from_account" and "to_account" are checked (as "checking").
+// The "card" column is also handled: if non-empty, that account is ensured as "credit_card".
 func ensureRowAccounts(h *TransactionHandler, row models.CsvTransactionRow, accountMap map[string]*models.Account) error {
 	txType := strings.ToLower(strings.TrimSpace(row.Type))
 
 	switch txType {
 	case string(models.TransactionTypePurchase), string(models.TransactionTypeEarning):
 		if row.Account != "" {
-			if err := ensureAccount(h, row.Account, accountMap); err != nil {
+			acctType := csvAccountType(row.AccountType)
+			if err := ensureAccount(h, row.Account, acctType, accountMap); err != nil {
+				return err
+			}
+		}
+		// Ensure the card account exists (credit_card type) if referenced
+		if row.Card != "" {
+			if err := ensureAccount(h, row.Card, models.AccountTypeCreditCard, accountMap); err != nil {
 				return err
 			}
 		}
 	case string(models.TransactionTypeTransfer):
 		if row.FromAccount != "" {
-			if err := ensureAccount(h, row.FromAccount, accountMap); err != nil {
+			if err := ensureAccount(h, row.FromAccount, models.AccountTypeChecking, accountMap); err != nil {
 				return err
 			}
 		}
 		if row.ToAccount != "" {
-			if err := ensureAccount(h, row.ToAccount, accountMap); err != nil {
+			if err := ensureAccount(h, row.ToAccount, models.AccountTypeChecking, accountMap); err != nil {
 				return err
 			}
 		}
@@ -174,23 +183,32 @@ func ensureRowAccounts(h *TransactionHandler, row models.CsvTransactionRow, acco
 	return nil
 }
 
+// csvAccountType maps the account_type CSV column value to the internal account type string.
+// "credit_card" → "credit_card"; everything else (including "bank_account", "transfer", "") → "checking".
+func csvAccountType(accountType string) string {
+	if strings.ToLower(strings.TrimSpace(accountType)) == models.AccountTypeCreditCard {
+		return models.AccountTypeCreditCard
+	}
+	return models.AccountTypeChecking
+}
+
 // ensureAccount looks up an account by name (case-insensitive) in accountMap.
-// If not found, it creates a new checking account with zero initial balance,
+// If not found, it creates a new account with the given accountType and zero initial balance,
 // saves it to storage, and inserts it into accountMap.
-func ensureAccount(h *TransactionHandler, name string, accountMap map[string]*models.Account) error {
+func ensureAccount(h *TransactionHandler, name string, accountType string, accountMap map[string]*models.Account) error {
 	key := strings.ToLower(name)
 	if _, exists := accountMap[key]; exists {
 		return nil // already known
 	}
 
 	// Create a new account with sensible defaults
-	acct, err := h.ledger.CreateAccount(name, 0, "", "", "", "", "", nil)
+	acct, err := h.ledger.CreateAccount(name, 0, "", "", "", "", accountType, nil)
 	if err != nil {
 		return fmt.Errorf("auto-create account %q: %w", name, err)
 	}
 
 	accountMap[key] = acct
-	log.Printf("Import: auto-created account %q", name)
+	log.Printf("Import: auto-created account %q (type: %s)", name, accountType)
 	return nil
 }
 
@@ -309,9 +327,13 @@ func parseImportCSV(r io.Reader) ([]models.CsvTransactionRow, error) {
 			Type:        getCol(record, "type"),
 			Category:    getCol(record, "category"),
 			Account:     getCol(record, "account"),
+			AccountType: getCol(record, "account_type"),
 			FromAccount: getCol(record, "from_account"),
 			ToAccount:   getCol(record, "to_account"),
 			Notes:       getCol(record, "notes"),
+			Installment: getCol(record, "installment"),
+			Card:        getCol(record, "card"),
+			Status:      getCol(record, "status"),
 		})
 	}
 
@@ -417,6 +439,37 @@ func buildTransaction(
 		if strings.EqualFold(row.FromAccount, row.ToAccount) {
 			return nil, fmt.Errorf("from_account and to_account cannot be the same for transfers")
 		}
+	}
+
+	// --- Parse installment (format "N/M") ---
+	if row.Installment != "" {
+		parts := strings.SplitN(row.Installment, "/", 2)
+		if len(parts) == 2 {
+			current, errC := strconv.Atoi(strings.TrimSpace(parts[0]))
+			total, errT := strconv.Atoi(strings.TrimSpace(parts[1]))
+			if errC == nil && errT == nil && total >= 2 {
+				// Deterministic group ID: UUID v5 seeded on description base + total
+				seed := "import-" + description + "-" + strconv.Itoa(total)
+				groupIDStr := uuid.NewSHA1(uuid.NameSpaceURL, []byte(seed)).String()
+				tx.InstallmentCurrent = &current
+				tx.InstallmentTotal = &total
+				tx.InstallmentGroupID = &groupIDStr
+			}
+		}
+	}
+
+	// --- Handle credit card purchases (card column) ---
+	if row.Card != "" && txType == models.TransactionTypePurchase {
+		falseVal := false
+		tx.Paid = &falseVal
+		billMonth := parsedDate.Format("2006-01")
+		tx.CreditCardBillMonth = &billMonth
+	}
+
+	// --- Handle virtual status ---
+	if row.Status == "virtual" {
+		isVirtual := true
+		tx.IsVirtual = &isVirtual
 	}
 
 	return tx, nil

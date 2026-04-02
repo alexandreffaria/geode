@@ -8,9 +8,13 @@ type CsvTransactionRow struct {
 	Type        string `json:"type"`        // "purchase", "earning", or "transfer"
 	Category    string `json:"category"`    // category name (matched case-insensitively); required for purchase/earning
 	Account     string `json:"account"`     // account name (matched case-insensitively); required for purchase/earning
+	AccountType string `json:"account_type"` // "bank_account", "credit_card", or "transfer"
 	FromAccount string `json:"from_account"` // required for transfer
 	ToAccount   string `json:"to_account"`   // required for transfer
-	Notes       string `json:"notes"`       // optional
+	Notes       string `json:"notes"`        // optional
+	Installment string `json:"installment"`  // raw installment string, e.g. "1/3" or ""
+	Card        string `json:"card"`         // credit card account name, e.g. "pagbank-wtf" or ""
+	Status      string `json:"status"`       // "real" or "virtual"; virtual transactions do not affect balances
 }
 
 // ImportRowResult is the per-row result returned to the client

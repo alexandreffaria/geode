@@ -568,6 +568,27 @@ export function ImporterPage() {
             </div>
           )}
 
+          {/* Import action */}
+          {phase !== "done" && (
+            <div className="importer-actions">
+              <button
+                type="button"
+                className="import-btn"
+                onClick={handleImport}
+                disabled={validCount === 0 || phase === "importing"}
+              >
+                {phase === "importing"
+                  ? "Importing…"
+                  : `Import ${validCount} transaction${validCount !== 1 ? "s" : ""}`}
+              </button>
+              {validCount === 0 && (
+                <p className="import-btn-hint">
+                  Fix all validation errors before importing.
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Preview table */}
           <div className="preview-table-wrapper">
             <table className="preview-table" aria-label="CSV preview">
@@ -706,27 +727,6 @@ export function ImporterPage() {
                     </ul>
                   </div>
                 ))}
-            </div>
-          )}
-
-          {/* Import action */}
-          {phase !== "done" && (
-            <div className="importer-actions">
-              <button
-                type="button"
-                className="import-btn"
-                onClick={handleImport}
-                disabled={validCount === 0 || phase === "importing"}
-              >
-                {phase === "importing"
-                  ? "Importing…"
-                  : `Import ${validCount} transaction${validCount !== 1 ? "s" : ""}`}
-              </button>
-              {validCount === 0 && (
-                <p className="import-btn-hint">
-                  Fix all validation errors before importing.
-                </p>
-              )}
             </div>
           )}
         </div>
